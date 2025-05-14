@@ -17,12 +17,31 @@ export default function MapComponent() {
   const [mapError, setMapError] = useState<string | null>(null)
   const [isMapReady, setIsMapReady] = useState(false)
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
+  const [apiKey, setApiKey] = useState<string>("")
+
+  // Obtener la API key al cargar el componente
+  useEffect(() => {
+    // Obtener la API key desde la variable de entorno
+    const fetchApiKey = async () => {
+      try {
+        const response = await fetch("/api/get-map-key")
+        const data = await response.json()
+        if (data.apiKey) {
+          setApiKey(data.apiKey)
+        } else {
+          setMapError("No se pudo obtener la clave de API de Google Maps")
+        }
+      } catch (error) {
+        console.error("Error al obtener la clave de API:", error)
+        setMapError("Error al obtener la clave de API de Google Maps")
+      }
+    }
+
+    fetchApiKey()
+  }, [])
 
   useEffect(() => {
-    if (!mapRef.current) return
-
-    // Reemplaza "TU_CLAVE_API" con la clave proporcionada por el usuario
-    const apiKey = "AIzaSyAGfymo74EK2kG_5vht87mQzl_ik6zRs0A"
+    if (!mapRef.current || !apiKey) return
 
     const loader = new Loader({
       apiKey,
@@ -137,7 +156,7 @@ export default function MapComponent() {
         infoWindowRef.current.close()
       }
     }
-  }, [])
+  }, [apiKey])
 
   // Función para crear el control personalizado
   function createCenterControl(map: google.maps.Map, google: any) {
@@ -181,7 +200,7 @@ export default function MapComponent() {
         className="w-full h-[500px] bg-gray-100"
         style={{ visibility: isMapReady ? "visible" : "hidden" }}
       ></div>
-      {!isMapReady && !mapError && (
+      {(!isMapReady || !apiKey) && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <div className="text-center">
             <div
