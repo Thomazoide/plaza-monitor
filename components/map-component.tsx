@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Loader } from "@googlemaps/js-api-loader"
 import type { google } from "@googlemaps/js-api-loader"
 import { greenAreas } from "@/data/green-areas"
+import { MapPin, Search, X } from "lucide-react"
 
 // Declarar el tipo para el objeto google global
 declare global {
@@ -18,6 +19,10 @@ export default function MapComponent() {
   const [isMapReady, setIsMapReady] = useState(false)
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
   const [apiKey, setApiKey] = useState<string>("")
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [showAreaList, setShowAreaList] = useState(false)
+  const [filteredAreas, setFilteredAreas] = useState(greenAreas)
 
   // Obtener la API key al cargar el componente
   useEffect(() => {
@@ -39,6 +44,16 @@ export default function MapComponent() {
 
     fetchApiKey()
   }, [])
+
+  // Filtrar áreas cuando cambia el término de búsqueda
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredAreas(greenAreas)
+    } else {
+      const filtered = greenAreas.filter((area) => area.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      setFilteredAreas(filtered)
+    }
+  }, [searchTerm])
 
   useEffect(() => {
     if (!mapRef.current || !apiKey) return
@@ -62,6 +77,9 @@ export default function MapComponent() {
           fullscreenControl: true,
           zoomControl: true,
         })
+
+        // Guardar la referencia del mapa
+        mapInstanceRef.current = mapInstance
 
         // Crear una ventana de información reutilizable
         const infoWindowInstance = new google.maps.InfoWindow()
@@ -128,12 +146,7 @@ export default function MapComponent() {
 
           // Añadir evento de clic para centrar en el área
           polygon.addListener("click", () => {
-            const bounds = new google.maps.LatLngBounds()
-            area.coordinates.forEach((coord) => {
-              bounds.extend(new google.maps.LatLng(coord.lat, coord.lng))
-            })
-            mapInstance.fitBounds(bounds)
-            mapInstance.setZoom(Math.min(18, mapInstance.getZoom() || 15)) // Limitar el zoom máximo a 18
+            centerMapOnArea(area)
           })
         })
 
@@ -178,16 +191,56 @@ export default function MapComponent() {
     controlButton.type = "button"
 
     controlButton.addEventListener("click", () => {
-      const bounds = new google.maps.LatLngBounds()
-      greenAreas.forEach((area) => {
-        area.coordinates.forEach((coord) => {
-          bounds.extend(new google.maps.LatLng(coord.lat, coord.lng))
-        })
-      })
-      map.fitBounds(bounds)
+      showAllAreas()
     })
 
     return controlButton
+  }
+
+  // Función para centrar el mapa en un área específica
+  const centerMapOnArea = (area: (typeof greenAreas)[0]) => {
+    if (!mapInstanceRef.current || !window.google) return
+
+    const bounds = new window.google.maps.LatLngBounds()
+    area.coordinates.forEach((coord) => {
+      bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng))
+    })
+    mapInstanceRef.current.fitBounds(bounds)
+    mapInstanceRef.current.setZoom(Math.min(18, mapInstanceRef.current.getZoom() || 15))
+
+    // Cerrar la lista de áreas después de seleccionar una
+    setShowAreaList(false)
+  }
+
+  // Función para mostrar todas las áreas
+  const showAllAreas = () => {
+    if (!mapInstanceRef.current || !window.google) return
+
+    const bounds = new window.google.maps.LatLngBounds()
+    greenAreas.forEach((area) => {
+      area.coordinates.forEach((coord) => {
+        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng))
+      })
+    })
+    mapInstanceRef.current.fitBounds(bounds)
+
+    // Cerrar la lista de áreas
+    setShowAreaList(false)
+  }
+
+  // Función para determinar el color del botón según el estado del área
+  const getAreaButtonColor = (area: (typeof greenAreas)[0]) => {
+    const now = new Date()
+    const timeDiff = now.getTime() - area.lastVisited.getTime()
+    const daysDiff = timeDiff / (1000 * 3600 * 24)
+
+    if (daysDiff < 1) {
+      return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+    } else if (daysDiff < 3) {
+      return "bg-orange-100 text-orange-800 hover:bg-orange-200 border-orange-300"
+    } else {
+      return "bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
+    }
   }
 
   return (
@@ -195,6 +248,71 @@ export default function MapComponent() {
       {mapError && (
         <div className="absolute top-0 left-0 right-0 bg-red-100 text-red-700 p-2 z-[1000] text-center">{mapError}</div>
       )}
+
+      {/* Panel de acceso rápido a áreas */}
+      <div className="absolute top-4 left-4 z-[100] flex flex-col gap-2 max-w-xs">
+        <div className="bg-white rounded-lg shadow-lg p-2 flex items-center">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Buscar área..."
+              className="w-full pl-8 pr-2 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setShowAreaList(true)}
+            />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+            {searchTerm && (
+              <button
+                className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <button
+            className="ml-2 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-md flex items-center justify-center"
+            onClick={() => setShowAreaList(!showAreaList)}
+            title={showAreaList ? "Ocultar lista" : "Mostrar lista"}
+          >
+            <MapPin className="h-5 w-5" />
+          </button>
+        </div>
+
+        {showAreaList && (
+          <div className="bg-white rounded-lg shadow-lg p-2 max-h-[300px] overflow-y-auto">
+            <div className="mb-2">
+              <button
+                className="w-full text-left p-2 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 flex items-center"
+                onClick={showAllAreas}
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Ver todas las áreas
+              </button>
+            </div>
+            <div className="space-y-1">
+              {filteredAreas.length > 0 ? (
+                filteredAreas.map((area) => (
+                  <button
+                    key={area.id}
+                    className={`w-full text-left p-2 rounded-md ${getAreaButtonColor(area)} border flex items-center justify-between`}
+                    onClick={() => centerMapOnArea(area)}
+                  >
+                    <span className="truncate">{area.name}</span>
+                    <span className="text-xs ml-1 whitespace-nowrap">
+                      {new Date(area.lastVisited).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-2">No se encontraron áreas</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div
         ref={mapRef}
         className="w-full h-[500px] bg-gray-100"
