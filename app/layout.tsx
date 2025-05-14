@@ -7,8 +7,8 @@ import Script from "next/script"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Mapa de Áreas Verdes - Puente Alto",
-  description: "Visualización de áreas verdes con estado de visita",
+  title: "Dashboard de Áreas Verdes - Puente Alto",
+  description: "Visualización y monitoreo de áreas verdes con estado de visita",
     generator: 'v0.dev'
 }
 
