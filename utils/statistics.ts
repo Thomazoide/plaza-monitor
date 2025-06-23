@@ -155,7 +155,7 @@ function generateVisitTrend() {
 
     // Crear un patrón más visible con variaciones mayores
     const baseVisits = 3 // Base de visitas diarias
-    const weekPattern = Math.sin((i / 7) * Math.PI) * 2 // Patrón semanal
+    const weekPattern = Math.sin((i / 7) * Math.PI) * 2 // Patr��n semanal
     const randomVariation = Math.random() * 2 - 1 // Variación aleatoria
 
     trend.push({
