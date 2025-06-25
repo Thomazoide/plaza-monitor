@@ -5,12 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Users, MapPin, Car, Calendar, Phone, Mail, Fuel, Wrench } from "lucide-react"
 import type { Escuadra } from "@/types/escuadras-types"
+import { VehicleTrackingMap } from "../tracking/vehicle-tracking-map"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 
 interface EscuadraDetailsProps {
   escuadra: Escuadra
 }
 
 export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
+  const [showTracking, setShowTracking] = useState(false)
+
   const getStatusColor = (escuadra: Escuadra) => {
     if (!escuadra.activa) return "bg-gray-100 text-gray-800"
     if (escuadra.trabajadores.length === 0) return "bg-yellow-100 text-yellow-800"
@@ -221,6 +226,16 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
                 {getVehicleStatusText(escuadra.vehiculo.estado)}
               </Badge>
             </div>
+            <div className="mt-3">
+              <Button
+                onClick={() => setShowTracking(!showTracking)}
+                className="w-full flex items-center justify-center gap-2"
+                variant={showTracking ? "secondary" : "default"}
+              >
+                <MapPin size={16} />
+                {showTracking ? "Ocultar Seguimiento" : "Ver Seguimiento en Tiempo Real"}
+              </Button>
+            </div>
             <div className="flex items-center gap-2">
               <Fuel className="h-4 w-4 text-gray-500" />
               <span className="font-medium">Combustible:</span>
@@ -237,6 +252,12 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
           </CardContent>
         </Card>
       </div>
+      {/* Tracking del Vehículo */}
+      {showTracking && (
+        <div className="md:col-span-2">
+          <VehicleTrackingMap vehiculo={escuadra.vehiculo} />
+        </div>
+      )}
     </div>
   )
 }
