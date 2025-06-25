@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  // Obtener la API key desde la variable de entorno
+  // 1️⃣  Buscamos primero la clave privada del servidor
   const apiKey = process.env.GOOGLE_API_KEY
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key no encontrada en las variables de entorno" }, { status: 500 })
-  }
-
-  // Devolver la API key
-  return NextResponse.json({ apiKey })
+  // Si existe la clave privada la devolvemos; de lo contrario devolvemos null.
+  return NextResponse.json({ apiKey: apiKey ?? null })
 }

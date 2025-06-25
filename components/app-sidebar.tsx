@@ -1,7 +1,8 @@
 "use client"
 
-import * as React from "react"
-import { Users, UserCheck, Car, Smartphone, MapPin, Home, BarChart3, Settings, ChevronRight } from "lucide-react"
+import type * as React from "react"
+import { Users, UserCheck, Car, Smartphone, MapPin, Home, ChevronRight, Shield } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 import {
   Sidebar,
@@ -21,54 +22,53 @@ import {
 const navigationItems = [
   {
     title: "Dashboard",
-    url: "#",
+    url: "/",
     icon: Home,
-    isActive: true,
-  }
+  },
 ]
 
 // Datos de gestión de recursos
 const resourceItems = [
   {
     title: "Trabajadores",
-    url: "#trabajadores",
+    url: "/trabajadores",
     icon: Users,
-    badge: "12",
   },
   {
     title: "Supervisores",
-    url: "#supervisores",
+    url: "/supervisores",
     icon: UserCheck,
-    badge: "3",
   },
   {
     title: "Escuadras",
     url: "/escuadras",
-    icon: Users,
-    badge: "5",
+    icon: Shield,
   },
   {
     title: "Vehículos",
-    url: "#vehiculos",
+    url: "/vehiculos",
     icon: Car,
-    badge: "8",
-  },
-  {
-    title: "Dispositivos",
-    url: "#dispositivos",
-    icon: Smartphone,
-    badge: "15",
   },
   {
     title: "Zonas",
-    url: "#zonas",
+    url: "/zonas",
     icon: MapPin,
-    badge: "12",
+  },
+  {
+    title: "Dispositivos",
+    url: "/dispositivos", // Actualizado
+    icon: Smartphone,
   },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [activeItem, setActiveItem] = React.useState("Dashboard")
+  const pathname = usePathname()
+  // Simplificamos la lógica de activeItem
+  const activeItem =
+    [...navigationItems, ...resourceItems].find((item) => pathname.startsWith(item.url) && item.url !== "/")?.title ||
+    (pathname === "/" ? "Dashboard" : "") ||
+    (pathname.startsWith("/configuracion") ? "Configuración" : "") ||
+    "Dashboard" // Fallback a Dashboard
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -92,11 +92,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={activeItem === item.title}
-                    onClick={() => setActiveItem(item.title)}
-                  >
+                  <SidebarMenuButton asChild isActive={activeItem === item.title}>
                     <a href={item.url} className="flex items-center">
                       <item.icon className="size-4" />
                       <span>{item.title}</span>
@@ -115,47 +111,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {resourceItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={activeItem === item.title}
-                    onClick={() => setActiveItem(item.title)}
-                  >
+                  <SidebarMenuButton asChild isActive={activeItem === item.title}>
                     <a href={item.url} className="flex items-center justify-between">
                       <div className="flex items-center">
                         <item.icon className="size-4" />
                         <span>{item.title}</span>
                       </div>
-                      {item.badge && (
-                        <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600 group-data-[collapsible=icon]:hidden">
-                          {item.badge}
-                        </span>
+                      {/* Mostrar chevron si la URL no es un placeholder (#) */}
+                      {!item.url.startsWith("#") && (
+                        <ChevronRight className="ml-auto size-3 opacity-50 group-data-[collapsible=icon]:hidden" />
                       )}
-                      <ChevronRight className="ml-auto size-3 opacity-50 group-data-[collapsible=icon]:hidden" />
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Configuración */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Sistema</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={activeItem === "Configuración"}
-                  onClick={() => setActiveItem("Configuración")}
-                >
-                  <a href="#configuracion" className="flex items-center">
-                    <Settings className="size-4" />
-                    <span>Configuración</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
