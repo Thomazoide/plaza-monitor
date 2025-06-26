@@ -1,4 +1,4 @@
-import type { Trabajador, Supervisor, Zona, Vehiculo, Escuadra } from "@/types/escuadras-types"
+import type { Trabajador, Supervisor, Zona, Vehiculo, Equipo } from "@/types/escuadras-types" // Cambiado Escuadra a Equipo
 
 // Datos de supervisores
 export const supervisores: Supervisor[] = [
@@ -48,7 +48,7 @@ export const trabajadores: Trabajador[] = [
     email: "carlos.gomez@puentealto.cl",
     fechaIngreso: new Date("2022-05-15"),
     activo: true,
-    escuadraId: 1,
+    equipoId: 1, // Cambiado de escuadraId
   },
   {
     id: 2,
@@ -59,7 +59,7 @@ export const trabajadores: Trabajador[] = [
     email: "ana.martinez@puentealto.cl",
     fechaIngreso: new Date("2022-08-20"),
     activo: true,
-    escuadraId: 1,
+    equipoId: 1, // Cambiado de escuadraId
   },
   {
     id: 3,
@@ -70,7 +70,7 @@ export const trabajadores: Trabajador[] = [
     email: "pedro.rodriguez@puentealto.cl",
     fechaIngreso: new Date("2023-01-12"),
     activo: true,
-    escuadraId: 1,
+    equipoId: 1, // Cambiado de escuadraId
   },
   {
     id: 4,
@@ -81,7 +81,7 @@ export const trabajadores: Trabajador[] = [
     email: "lucia.fernandez@puentealto.cl",
     fechaIngreso: new Date("2023-03-08"),
     activo: true,
-    escuadraId: 2,
+    equipoId: 2, // Cambiado de escuadraId
   },
   {
     id: 5,
@@ -92,7 +92,7 @@ export const trabajadores: Trabajador[] = [
     email: "miguel.torres@puentealto.cl",
     fechaIngreso: new Date("2023-06-15"),
     activo: true,
-    escuadraId: 2,
+    equipoId: 2, // Cambiado de escuadraId
   },
   {
     id: 6,
@@ -179,7 +179,7 @@ export const zonas: Zona[] = [
   {
     id: 5,
     nombre: "Zona Oeste",
-    descripcion: "Parque Europa y sectores occidentales", // Corregido "descripción" a "descripcion"
+    descripcion: "Parque Europa y sectores occidentales",
     coordenadas: [
       { lat: -33.595602766545866, lng: -70.58483666114523 },
       { lat: -33.595516010185776, lng: -70.58901769133645 },
@@ -239,7 +239,7 @@ export const vehiculos: Vehiculo[] = [
     modelo: "Sprinter",
     año: 2022,
     tipo: "furgon",
-    estado: "en_uso", // Cambiado a en_uso para pruebas
+    estado: "en_uso",
     combustible: 88,
   },
   {
@@ -269,44 +269,47 @@ export const vehiculos: Vehiculo[] = [
     modelo: "L200",
     año: 2022,
     tipo: "camioneta",
-    estado: "en_uso", // Cambiado a en_uso para pruebas
+    estado: "en_uso",
     combustible: 72,
   },
 ]
 
-// Datos de escuadras
-export const escuadras: Escuadra[] = [
+// Datos de equipos (antes escuadras)
+export const equipos: Equipo[] = [
   {
     id: 1,
-    nombre: "Escuadra Alpha",
+    nombre: "Equipo Alpha",
     supervisor: supervisores[0],
-    trabajadores: trabajadores.filter((t) => t.escuadraId === 1),
+    trabajadores: trabajadores.filter((t) => t.equipoId === 1),
     zona: zonas[0],
-    vehiculo: vehiculos[0], // Asignado a ABCD-12
+    vehiculo: vehiculos[0],
     fechaCreacion: new Date("2024-01-15"),
     activa: true,
-    descripcion: "Escuadra especializada en mantenimiento de áreas centrales",
+    descripcion: "Equipo especializado en mantenimiento de áreas centrales",
   },
   {
     id: 2,
-    nombre: "Escuadra Beta",
+    nombre: "Equipo Beta",
     supervisor: supervisores[1],
-    trabajadores: trabajadores.filter((t) => t.escuadraId === 2),
+    trabajadores: trabajadores.filter((t) => t.equipoId === 2),
     zona: zonas[1],
-    vehiculo: vehiculos[1], // Asignado a EFGH-34
+    vehiculo: vehiculos[1],
     fechaCreacion: new Date("2024-02-01"),
     activa: true,
-    descripcion: "Escuadra enfocada en parques y áreas recreativas del norte",
+    descripcion: "Equipo enfocado en parques y áreas recreativas del norte",
   },
   {
     id: 3,
-    nombre: "Escuadra Gamma",
+    nombre: "Equipo Gamma",
     supervisor: supervisores[2],
-    trabajadores: [], // Sin trabajadores inicialmente
+    trabajadores: [],
     zona: zonas[2],
-    vehiculo: vehiculos[4], // Asignado a QRST-90 (Mercedes Sprinter)
+    vehiculo: vehiculos[4],
     fechaCreacion: new Date("2024-03-10"),
     activa: true,
-    descripcion: "Escuadra de nueva formación para zona sur",
+    descripcion: "Equipo de nueva formación para zona sur",
   },
 ]
+
+// Mantener export de escuadras para compatibilidad con otros archivos
+export const escuadras = equipos

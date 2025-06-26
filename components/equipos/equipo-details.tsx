@@ -4,30 +4,30 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Users, MapPin, Car, Calendar, Phone, Mail, Fuel, Wrench } from "lucide-react"
-import type { Escuadra } from "@/types/escuadras-types"
+import type { Equipo } from "@/types/escuadras-types"
 import { VehicleTrackingMap } from "../tracking/vehicle-tracking-map"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
-interface EscuadraDetailsProps {
-  escuadra: Escuadra
+interface EquipoDetailsProps {
+  equipo: Equipo
 }
 
-export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
+export function EquipoDetails({ equipo }: EquipoDetailsProps) {
   const [showTracking, setShowTracking] = useState(false)
 
-  const getStatusColor = (escuadra: Escuadra) => {
-    if (!escuadra.activa) return "bg-gray-100 text-gray-800"
-    if (escuadra.trabajadores.length === 0) return "bg-yellow-100 text-yellow-800"
-    if (escuadra.trabajadores.length < 2) return "bg-orange-100 text-orange-800"
+  const getStatusColor = (equipo: Equipo) => {
+    if (!equipo.activa) return "bg-gray-100 text-gray-800"
+    if (equipo.trabajadores.length === 0) return "bg-yellow-100 text-yellow-800"
+    if (equipo.trabajadores.length < 2) return "bg-orange-100 text-orange-800"
     return "bg-green-100 text-green-800"
   }
 
-  const getStatusText = (escuadra: Escuadra) => {
-    if (!escuadra.activa) return "Disuelta"
-    if (escuadra.trabajadores.length === 0) return "Sin personal"
-    if (escuadra.trabajadores.length < 2) return "Personal insuficiente"
-    return "Operativa"
+  const getStatusText = (equipo: Equipo) => {
+    if (!equipo.activa) return "Disuelto"
+    if (equipo.trabajadores.length === 0) return "Sin personal"
+    if (equipo.trabajadores.length < 2) return "Personal insuficiente"
+    return "Operativo"
   }
 
   const getVehicleStatusColor = (estado: string) => {
@@ -67,10 +67,10 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold">{escuadra.nombre}</h2>
-          {escuadra.descripcion && <p className="text-gray-600 mt-1">{escuadra.descripcion}</p>}
+          <h2 className="text-2xl font-bold">{equipo.nombre}</h2>
+          {equipo.descripcion && <p className="text-gray-600 mt-1">{equipo.descripcion}</p>}
         </div>
-        <Badge className={getStatusColor(escuadra)}>{getStatusText(escuadra)}</Badge>
+        <Badge className={getStatusColor(equipo)}>{getStatusText(equipo)}</Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -85,16 +85,16 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
           <CardContent className="space-y-3">
             <div>
               <span className="font-medium">Fecha de creación:</span>
-              <p className="text-gray-600">{escuadra.fechaCreacion.toLocaleDateString("es-CL")}</p>
+              <p className="text-gray-600">{equipo.fechaCreacion.toLocaleDateString("es-CL")}</p>
             </div>
             <div>
               <span className="font-medium">Estado:</span>
-              <p className="text-gray-600">{getStatusText(escuadra)}</p>
+              <p className="text-gray-600">{getStatusText(equipo)}</p>
             </div>
             <div>
               <span className="font-medium">Personal asignado:</span>
               <p className="text-gray-600">
-                {escuadra.trabajadores.length + 1} personas (1 supervisor + {escuadra.trabajadores.length} trabajadores)
+                {equipo.trabajadores.length + 1} personas (1 supervisor + {equipo.trabajadores.length} trabajadores)
               </p>
             </div>
           </CardContent>
@@ -112,24 +112,24 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
             <div>
               <span className="font-medium">Nombre:</span>
               <p className="text-gray-600">
-                {escuadra.supervisor.nombre} {escuadra.supervisor.apellido}
+                {equipo.supervisor.nombre} {equipo.supervisor.apellido}
               </p>
             </div>
             <div>
               <span className="font-medium">RUT:</span>
-              <p className="text-gray-600">{escuadra.supervisor.rut}</p>
+              <p className="text-gray-600">{equipo.supervisor.rut}</p>
             </div>
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">{escuadra.supervisor.telefono}</span>
+              <span className="text-gray-600">{equipo.supervisor.telefono}</span>
             </div>
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">{escuadra.supervisor.email}</span>
+              <span className="text-gray-600">{equipo.supervisor.email}</span>
             </div>
             <div>
               <span className="font-medium">Experiencia:</span>
-              <p className="text-gray-600">{escuadra.supervisor.experiencia} años</p>
+              <p className="text-gray-600">{equipo.supervisor.experiencia} años</p>
             </div>
           </CardContent>
         </Card>
@@ -139,13 +139,13 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Trabajadores ({escuadra.trabajadores.length}/4)
+              Trabajadores ({equipo.trabajadores.length}/4)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {escuadra.trabajadores.length > 0 ? (
+            {equipo.trabajadores.length > 0 ? (
               <div className="space-y-3">
-                {escuadra.trabajadores.map((trabajador, index) => (
+                {equipo.trabajadores.map((trabajador, index) => (
                   <div key={trabajador.id}>
                     <div className="flex justify-between items-start">
                       <div>
@@ -161,7 +161,7 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
                         </div>
                       </div>
                     </div>
-                    {index < escuadra.trabajadores.length - 1 && <Separator className="mt-3" />}
+                    {index < equipo.trabajadores.length - 1 && <Separator className="mt-3" />}
                   </div>
                 ))}
               </div>
@@ -182,16 +182,16 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
           <CardContent className="space-y-3">
             <div>
               <span className="font-medium">Nombre:</span>
-              <p className="text-gray-600">{escuadra.zona.nombre}</p>
+              <p className="text-gray-600">{equipo.zona.nombre}</p>
             </div>
             <div>
               <span className="font-medium">Descripción:</span>
-              <p className="text-gray-600">{escuadra.zona.descripcion}</p>
+              <p className="text-gray-600">{equipo.zona.descripcion}</p>
             </div>
             <div>
               <span className="font-medium">Estado:</span>
-              <Badge className={escuadra.zona.activa ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                {escuadra.zona.activa ? "Activa" : "Inactiva"}
+              <Badge className={equipo.zona.activa ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                {equipo.zona.activa ? "Activa" : "Inactiva"}
               </Badge>
             </div>
           </CardContent>
@@ -209,21 +209,21 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
             <div>
               <span className="font-medium">Vehículo:</span>
               <p className="text-gray-600">
-                {escuadra.vehiculo.marca} {escuadra.vehiculo.modelo} ({escuadra.vehiculo.año})
+                {equipo.vehiculo.marca} {equipo.vehiculo.modelo} ({equipo.vehiculo.año})
               </p>
             </div>
             <div>
               <span className="font-medium">Patente:</span>
-              <p className="text-gray-600 font-mono">{escuadra.vehiculo.patente}</p>
+              <p className="text-gray-600 font-mono">{equipo.vehiculo.patente}</p>
             </div>
             <div>
               <span className="font-medium">Tipo:</span>
-              <p className="text-gray-600 capitalize">{escuadra.vehiculo.tipo}</p>
+              <p className="text-gray-600 capitalize">{equipo.vehiculo.tipo}</p>
             </div>
             <div className="flex items-center justify-between">
               <span className="font-medium">Estado:</span>
-              <Badge className={getVehicleStatusColor(escuadra.vehiculo.estado)}>
-                {getVehicleStatusText(escuadra.vehiculo.estado)}
+              <Badge className={getVehicleStatusColor(equipo.vehiculo.estado)}>
+                {getVehicleStatusText(equipo.vehiculo.estado)}
               </Badge>
             </div>
             <div className="mt-3">
@@ -239,11 +239,11 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
             <div className="flex items-center gap-2">
               <Fuel className="h-4 w-4 text-gray-500" />
               <span className="font-medium">Combustible:</span>
-              <span className={`font-bold ${getFuelColor(escuadra.vehiculo.combustible)}`}>
-                {escuadra.vehiculo.combustible}%
+              <span className={`font-bold ${getFuelColor(equipo.vehiculo.combustible)}`}>
+                {equipo.vehiculo.combustible}%
               </span>
             </div>
-            {escuadra.vehiculo.estado === "mantenimiento" && (
+            {equipo.vehiculo.estado === "mantenimiento" && (
               <div className="flex items-center gap-2 p-2 bg-red-50 rounded-md">
                 <Wrench className="h-4 w-4 text-red-500" />
                 <span className="text-sm text-red-700">Vehículo en mantenimiento</span>
@@ -255,7 +255,7 @@ export function EscuadraDetails({ escuadra }: EscuadraDetailsProps) {
       {/* Tracking del Vehículo */}
       {showTracking && (
         <div className="md:col-span-2">
-          <VehicleTrackingMap vehiculo={escuadra.vehiculo} />
+          <VehicleTrackingMap vehiculo={equipo.vehiculo} />
         </div>
       )}
     </div>

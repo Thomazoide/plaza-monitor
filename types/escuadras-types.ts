@@ -7,7 +7,7 @@ export interface Trabajador {
   email: string
   fechaIngreso: Date
   activo: boolean
-  escuadraId?: number
+  equipoId?: number // Cambiado de escuadraId
 }
 
 export interface Supervisor {
@@ -41,7 +41,8 @@ export interface Vehiculo {
   combustible: number // porcentaje
 }
 
-export interface Escuadra {
+export interface Equipo {
+  // Cambiado de Escuadra
   id: number
   nombre: string
   supervisor: Supervisor
@@ -53,7 +54,8 @@ export interface Escuadra {
   descripcion?: string
 }
 
-export interface CreateEscuadraData {
+export interface CreateEquipoData {
+  // Cambiado de CreateEscuadraData
   nombre: string
   supervisorId: number
   zonaId: number

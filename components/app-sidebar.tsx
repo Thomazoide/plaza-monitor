@@ -40,8 +40,8 @@ const resourceItems = [
     icon: UserCheck,
   },
   {
-    title: "Escuadras",
-    url: "/escuadras",
+    title: "Equipos", // Cambiado de "Escuadras"
+    url: "/equipos", // Cambiado de "/escuadras"
     icon: Shield,
   },
   {
@@ -56,7 +56,7 @@ const resourceItems = [
   },
   {
     title: "Dispositivos",
-    url: "/dispositivos", // Actualizado
+    url: "/dispositivos",
     icon: Smartphone,
   },
 ]

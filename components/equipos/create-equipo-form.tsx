@@ -11,16 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertTriangle } from "lucide-react"
-import { supervisores, trabajadores, zonas, vehiculos, escuadras } from "@/data/escuadras-data"
-import type { Escuadra, CreateEscuadraData } from "@/types/escuadras-types"
+import { supervisores, trabajadores, zonas, vehiculos, equipos } from "@/data/escuadras-data"
+import type { Equipo, CreateEquipoData } from "@/types/escuadras-types"
 
-interface CreateEscuadraFormProps {
-  onSubmit: (escuadra: Escuadra) => void
+interface CreateEquipoFormProps {
+  onSubmit: (equipo: Equipo) => void
   onCancel: () => void
 }
 
-export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormProps) {
-  const [formData, setFormData] = useState<CreateEscuadraData>({
+export function CreateEquipoForm({ onSubmit, onCancel }: CreateEquipoFormProps) {
+  const [formData, setFormData] = useState<CreateEquipoData>({
     nombre: "",
     supervisorId: 0,
     zonaId: 0,
@@ -32,12 +32,12 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
 
   // Filtrar recursos disponibles
   const supervisoresDisponibles = supervisores.filter(
-    (s) => s.activo && !escuadras.some((e) => e.supervisor.id === s.id && e.activa),
+    (s) => s.activo && !equipos.some((e) => e.supervisor.id === s.id && e.activa),
   )
 
-  const trabajadoresDisponibles = trabajadores.filter((t) => t.activo && !t.escuadraId)
+  const trabajadoresDisponibles = trabajadores.filter((t) => t.activo && !t.equipoId)
 
-  const zonasDisponibles = zonas.filter((z) => z.activa && !escuadras.some((e) => e.zona.id === z.id && e.activa))
+  const zonasDisponibles = zonas.filter((z) => z.activa && !equipos.some((e) => e.zona.id === z.id && e.activa))
 
   const vehiculosDisponibles = vehiculos.filter((v) => v.estado === "disponible")
 
@@ -45,7 +45,7 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
     const newErrors: string[] = []
 
     if (!formData.nombre.trim()) {
-      newErrors.push("El nombre de la escuadra es obligatorio")
+      newErrors.push("El nombre del equipo es obligatorio")
     }
 
     if (formData.supervisorId === 0) {
@@ -61,7 +61,7 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
     }
 
     if (formData.trabajadorIds.length > 4) {
-      newErrors.push("Una escuadra no puede tener más de 4 trabajadores")
+      newErrors.push("Un equipo no puede tener más de 4 trabajadores")
     }
 
     return newErrors
@@ -76,14 +76,14 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
       return
     }
 
-    // Crear nueva escuadra
+    // Crear nuevo equipo
     const supervisor = supervisores.find((s) => s.id === formData.supervisorId)!
     const zona = zonas.find((z) => z.id === formData.zonaId)!
     const vehiculo = vehiculos.find((v) => v.id === formData.vehiculoId)!
     const trabajadoresSeleccionados = trabajadores.filter((t) => formData.trabajadorIds.includes(t.id))
 
-    const newEscuadra: Escuadra = {
-      id: Math.max(...escuadras.map((e) => e.id)) + 1,
+    const newEquipo: Equipo = {
+      id: Math.max(...equipos.map((e) => e.id)) + 1,
       nombre: formData.nombre.trim(),
       supervisor,
       trabajadores: trabajadoresSeleccionados,
@@ -94,7 +94,7 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
       descripcion: formData.descripcion.trim() || undefined,
     }
 
-    onSubmit(newEscuadra)
+    onSubmit(newEquipo)
   }
 
   const handleTrabajadorChange = (trabajadorId: number, checked: boolean) => {
@@ -131,12 +131,12 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
       {/* Información básica */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="nombre">Nombre de la Escuadra *</Label>
+          <Label htmlFor="nombre">Nombre del Equipo *</Label>
           <Input
             id="nombre"
             value={formData.nombre}
             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-            placeholder="Ej: Escuadra Delta"
+            placeholder="Ej: Equipo Delta"
           />
         </div>
 
@@ -229,7 +229,7 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
           id="descripcion"
           value={formData.descripcion}
           onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-          placeholder="Descripción de la escuadra y sus responsabilidades..."
+          placeholder="Descripción del equipo y sus responsabilidades..."
           rows={3}
         />
       </div>
@@ -239,7 +239,7 @@ export function CreateEscuadraForm({ onSubmit, onCancel }: CreateEscuadraFormPro
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit">Crear Escuadra</Button>
+        <Button type="submit">Crear Equipo</Button>
       </div>
     </form>
   )
