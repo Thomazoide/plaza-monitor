@@ -50,7 +50,7 @@ const resourceItems = [
     icon: Car,
   },
   {
-    title: "Zonas",
+    title: "Áreas Verdes",
     url: "/zonas",
     icon: MapPin,
   },

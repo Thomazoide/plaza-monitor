@@ -39,13 +39,13 @@ export function ListaZonas({ zonas, onEdit, onDelete, onViewOnMap }: ListaZonasP
             </Badge>
           </div>
           <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
-            <Button variant="outline" size="xs" onClick={() => onViewOnMap(zona)} className="flex-1">
+            <Button variant="outline" size="sm" onClick={() => onViewOnMap(zona)} className="flex-1">
               <Eye size={12} className="mr-1" /> Ver
             </Button>
-            <Button variant="outline" size="xs" onClick={() => onEdit(zona)} className="flex-1">
+            <Button variant="outline" size="sm" onClick={() => onEdit(zona)} className="flex-1">
               <Edit size={12} className="mr-1" /> Editar
             </Button>
-            <Button variant="destructive" size="xs" onClick={() => onDelete(zona)} className="flex-1">
+            <Button variant="destructive" size="sm" onClick={() => onDelete(zona)} className="flex-1">
               <Trash2 size={12} className="mr-1" /> Eliminar
             </Button>
           </div>
