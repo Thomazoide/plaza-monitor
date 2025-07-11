@@ -21,7 +21,7 @@ export function EquiposPage() {
   const filteredEquipos = equipos.filter(
     (equipo) =>
       equipo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      equipo.zona?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (equipo.zona?.nombre ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       equipo.supervisor?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       equipo.supervisor?.apellido.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -189,7 +189,7 @@ export function EquiposPage() {
 
                                 <div className="flex items-center gap-2">
                                   <MapPin className="h-4 w-4 text-gray-400" />
-                                  <span>{equipo.zona || "Sin zona asignada"}</span>
+                                  <span>{equipo.zona?.nombre ?? "Sin zona asignada"}</span>
                                 </div>
 
                                 <div className="flex items-center gap-2">

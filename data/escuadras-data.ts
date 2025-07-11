@@ -154,13 +154,63 @@ export const vehiculos: Vehiculo[] = [
   },
 ]
 
+// --- ZONAS --------------------------------------------------------------
+import type { Zona } from "@/types/escuadras-types"
+
+export const zonas: Zona[] = [
+  {
+    id: 1,
+    nombre: "Zona Norte",
+    descripcion: "Sector norte de la comuna",
+    coordenadas: [
+      { lat: -33.58, lng: -70.61 },
+      { lat: -33.59, lng: -70.62 },
+      { lat: -33.6, lng: -70.6 },
+    ],
+    activa: true,
+  },
+  {
+    id: 2,
+    nombre: "Zona Sur",
+    descripcion: "Sector sur de la comuna",
+    coordenadas: [
+      { lat: -33.62, lng: -70.58 },
+      { lat: -33.63, lng: -70.59 },
+      { lat: -33.64, lng: -70.57 },
+    ],
+    activa: true,
+  },
+  {
+    id: 3,
+    nombre: "Zona Centro",
+    descripcion: "Centro de la comuna",
+    coordenadas: [
+      { lat: -33.6, lng: -70.57 },
+      { lat: -33.61, lng: -70.58 },
+      { lat: -33.61, lng: -70.56 },
+    ],
+    activa: true,
+  },
+  {
+    id: 4,
+    nombre: "Zona Oeste",
+    descripcion: "Sector oeste de la comuna",
+    coordenadas: [
+      { lat: -33.59, lng: -70.63 },
+      { lat: -33.6, lng: -70.64 },
+      { lat: -33.61, lng: -70.62 },
+    ],
+    activa: true,
+  },
+]
+
 // Equipos (anteriormente escuadras)
 export const equipos: Equipo[] = [
   {
     id: 1,
     nombre: "Equipo Alpha",
     supervisor: supervisores[0],
-    zona: "Zona Norte",
+    zona: zonas[0],
     vehiculo: vehiculos[1], // Toyota Hilux
     estado: "activo",
     fechaCreacion: new Date("2021-01-01"),
@@ -169,7 +219,7 @@ export const equipos: Equipo[] = [
     id: 2,
     nombre: "Equipo Beta",
     supervisor: supervisores[1],
-    zona: "Zona Sur",
+    zona: zonas[1],
     vehiculo: vehiculos[2], // Ford Ranger
     estado: "activo",
     fechaCreacion: new Date("2021-02-01"),
@@ -178,7 +228,7 @@ export const equipos: Equipo[] = [
     id: 3,
     nombre: "Equipo Gamma",
     supervisor: supervisores[2],
-    zona: "Zona Centro",
+    zona: zonas[2],
     vehiculo: undefined, // Sin vehículo asignado
     estado: "activo",
     fechaCreacion: new Date("2021-03-01"),
@@ -187,7 +237,7 @@ export const equipos: Equipo[] = [
     id: 4,
     nombre: "Equipo Lambda",
     supervisor: supervisores[3], // Laura García Morales
-    zona: "Zona Oeste",
+    zona: zonas[3],
     vehiculo: vehiculos[0], // Nissan Versa (ID 1) - Vehículo con seguimiento real
     estado: "activo",
     fechaCreacion: new Date("2021-04-01"),

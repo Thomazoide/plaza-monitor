@@ -95,7 +95,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
               <CardContent>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Zona Asignada</Label>
-                  <p className="text-lg font-semibold">{equipo.zona || "Sin zona asignada"}</p>
+                  <p className="text-lg font-semibold">{equipo.zona?.nombre ?? "Sin zona asignada"}</p>
                 </div>
               </CardContent>
             </Card>
