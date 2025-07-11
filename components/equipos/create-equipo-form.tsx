@@ -3,244 +3,205 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle } from "lucide-react"
-import { supervisores, trabajadores, zonas, vehiculos, equipos } from "@/data/escuadras-data"
-import type { Equipo, CreateEquipoData } from "@/types/escuadras-types"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Save, X } from "lucide-react"
+import { supervisores, vehiculos, equipos } from "@/data/escuadras-data"
+import type { CreateEquipoData } from "@/types/escuadras-types"
 
 interface CreateEquipoFormProps {
-  onSubmit: (equipo: Equipo) => void
-  onCancel: () => void
+  onBack: () => void
 }
 
-export function CreateEquipoForm({ onSubmit, onCancel }: CreateEquipoFormProps) {
+export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
   const [formData, setFormData] = useState<CreateEquipoData>({
     nombre: "",
-    supervisorId: 0,
-    zonaId: 0,
-    vehiculoId: 0,
-    trabajadorIds: [],
-    descripcion: "",
+    supervisorId: undefined,
+    zona: "",
+    vehiculoId: undefined,
   })
-  const [errors, setErrors] = useState<string[]>([])
 
-  // Filtrar recursos disponibles
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Filtrar supervisores y vehículos disponibles
   const supervisoresDisponibles = supervisores.filter(
-    (s) => s.activo && !equipos.some((e) => e.supervisor.id === s.id && e.activa),
+    (s) => s.estado === "activo" && !equipos.some((e) => e.supervisor?.id === s.id),
   )
 
-  const trabajadoresDisponibles = trabajadores.filter((t) => t.activo && !t.equipoId)
+  const vehiculosDisponibles = vehiculos.filter(
+    (v) => v.estado === "disponible" && !equipos.some((e) => e.vehiculo?.id === v.id),
+  )
 
-  const zonasDisponibles = zonas.filter((z) => z.activa && !equipos.some((e) => e.zona.id === z.id && e.activa))
+  const zonasDisponibles = ["Zona Norte", "Zona Sur", "Zona Centro", "Zona Este", "Zona Oeste"].filter(
+    (zona) => !equipos.some((e) => e.zona === zona),
+  )
 
-  const vehiculosDisponibles = vehiculos.filter((v) => v.estado === "disponible")
-
-  const validateForm = (): string[] => {
-    const newErrors: string[] = []
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
 
     if (!formData.nombre.trim()) {
-      newErrors.push("El nombre del equipo es obligatorio")
+      newErrors.nombre = "El nombre del equipo es requerido"
+    } else if (equipos.some((e) => e.nombre.toLowerCase() === formData.nombre.toLowerCase())) {
+      newErrors.nombre = "Ya existe un equipo con este nombre"
     }
 
-    if (formData.supervisorId === 0) {
-      newErrors.push("Debe seleccionar un supervisor")
+    if (!formData.supervisorId) {
+      newErrors.supervisorId = "Debe seleccionar un supervisor"
     }
 
-    if (formData.zonaId === 0) {
-      newErrors.push("Debe seleccionar una zona")
+    if (!formData.zona) {
+      newErrors.zona = "Debe seleccionar una zona"
     }
 
-    if (formData.vehiculoId === 0) {
-      newErrors.push("Debe seleccionar un vehículo")
-    }
-
-    if (formData.trabajadorIds.length > 4) {
-      newErrors.push("Un equipo no puede tener más de 4 trabajadores")
-    }
-
-    return newErrors
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    const validationErrors = validateForm()
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors)
+    if (!validateForm()) {
       return
     }
 
-    // Crear nuevo equipo
-    const supervisor = supervisores.find((s) => s.id === formData.supervisorId)!
-    const zona = zonas.find((z) => z.id === formData.zonaId)!
-    const vehiculo = vehiculos.find((v) => v.id === formData.vehiculoId)!
-    const trabajadoresSeleccionados = trabajadores.filter((t) => formData.trabajadorIds.includes(t.id))
+    // Aquí normalmente enviarías los datos al servidor
+    console.log("Crear equipo:", formData)
 
-    const newEquipo: Equipo = {
-      id: Math.max(...equipos.map((e) => e.id)) + 1,
-      nombre: formData.nombre.trim(),
-      supervisor,
-      trabajadores: trabajadoresSeleccionados,
-      zona,
-      vehiculo,
-      fechaCreacion: new Date(),
-      activa: true,
-      descripcion: formData.descripcion.trim() || undefined,
-    }
-
-    onSubmit(newEquipo)
+    // Simular creación exitosa
+    alert("Equipo creado exitosamente")
+    onBack()
   }
 
-  const handleTrabajadorChange = (trabajadorId: number, checked: boolean) => {
-    if (checked) {
-      if (formData.trabajadorIds.length < 4) {
-        setFormData({
-          ...formData,
-          trabajadorIds: [...formData.trabajadorIds, trabajadorId],
-        })
-      }
-    } else {
-      setFormData({
-        ...formData,
-        trabajadorIds: formData.trabajadorIds.filter((id) => id !== trabajadorId),
-      })
+  const handleInputChange = (field: keyof CreateEquipoData, value: string | number | undefined) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }))
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 h-screen overflow-auto">
-      {errors.length > 0 && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <ul className="list-disc list-inside">
-              {errors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Información básica */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="nombre">Nombre del Equipo *</Label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-            placeholder="Ej: Equipo Delta"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="supervisor">Supervisor *</Label>
-          <Select
-            value={formData.supervisorId.toString()}
-            onValueChange={(value) => setFormData({ ...formData, supervisorId: Number.parseInt(value) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar supervisor" />
-            </SelectTrigger>
-            <SelectContent>
-              {supervisoresDisponibles.map((supervisor) => (
-                <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
-                  {supervisor.nombre} {supervisor.apellido} ({supervisor.experiencia} años exp.)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Zona y Vehículo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="zona">Zona Asignada *</Label>
-          <Select
-            value={formData.zonaId.toString()}
-            onValueChange={(value) => setFormData({ ...formData, zonaId: Number.parseInt(value) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar zona" />
-            </SelectTrigger>
-            <SelectContent>
-              {zonasDisponibles.map((zona) => (
-                <SelectItem key={zona.id} value={zona.id.toString()}>
-                  {zona.nombre} - {zona.descripcion}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="vehiculo">Vehículo Asignado *</Label>
-          <Select
-            value={formData.vehiculoId.toString()}
-            onValueChange={(value) => setFormData({ ...formData, vehiculoId: Number.parseInt(value) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar vehículo" />
-            </SelectTrigger>
-            <SelectContent>
-              {vehiculosDisponibles.map((vehiculo) => (
-                <SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
-                  {vehiculo.marca} {vehiculo.modelo} ({vehiculo.patente}) - {vehiculo.combustible}% combustible
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Trabajadores */}
-      <div className="space-y-2">
-        <Label>Trabajadores (máximo 4)</Label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
-          {trabajadoresDisponibles.map((trabajador) => (
-            <div key={trabajador.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`trabajador-${trabajador.id}`}
-                checked={formData.trabajadorIds.includes(trabajador.id)}
-                onCheckedChange={(checked) => handleTrabajadorChange(trabajador.id, checked as boolean)}
-                disabled={!formData.trabajadorIds.includes(trabajador.id) && formData.trabajadorIds.length >= 4}
-              />
-              <Label htmlFor={`trabajador-${trabajador.id}`} className="text-sm cursor-pointer">
-                {trabajador.nombre} {trabajador.apellido}
-              </Label>
-            </div>
-          ))}
-        </div>
-        <p className="text-sm text-gray-500">Seleccionados: {formData.trabajadorIds.length}/4</p>
-      </div>
-
-      {/* Descripción */}
-      <div className="space-y-2">
-        <Label htmlFor="descripcion">Descripción (opcional)</Label>
-        <Textarea
-          id="descripcion"
-          value={formData.descripcion}
-          onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-          placeholder="Descripción del equipo y sus responsabilidades..."
-          rows={3}
-        />
-      </div>
-
-      {/* Botones */}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={onBack} className="mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver a la lista
         </Button>
-        <Button type="submit">Crear Equipo</Button>
+        <h1 className="text-2xl font-bold">Crear Nuevo Equipo</h1>
+        <p className="text-gray-600">Complete la información para crear un nuevo equipo de trabajo</p>
       </div>
-    </form>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Información del Equipo</CardTitle>
+          <CardDescription>Ingrese los datos básicos del equipo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Nombre del Equipo */}
+            <div className="space-y-2">
+              <Label htmlFor="nombre">Nombre del Equipo *</Label>
+              <Input
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) => handleInputChange("nombre", e.target.value)}
+                placeholder="Ej: Equipo Delta"
+                className={errors.nombre ? "border-red-500" : ""}
+              />
+              {errors.nombre && <p className="text-sm text-red-500">{errors.nombre}</p>}
+            </div>
+
+            {/* Supervisor */}
+            <div className="space-y-2">
+              <Label htmlFor="supervisor">Supervisor *</Label>
+              <Select
+                value={formData.supervisorId?.toString() || "0"}
+                onValueChange={(value) => handleInputChange("supervisorId", value ? Number.parseInt(value) : undefined)}
+              >
+                <SelectTrigger className={errors.supervisorId ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Seleccionar supervisor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {supervisoresDisponibles.map((supervisor) => (
+                    <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
+                      {supervisor.nombre} {supervisor.apellido}
+                      <Badge variant="outline" className="ml-2">
+                        {supervisor.rut}
+                      </Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.supervisorId && <p className="text-sm text-red-500">{errors.supervisorId}</p>}
+              {supervisoresDisponibles.length === 0 && (
+                <p className="text-sm text-amber-600">No hay supervisores disponibles</p>
+              )}
+            </div>
+
+            {/* Zona */}
+            <div className="space-y-2">
+              <Label htmlFor="zona">Zona de Trabajo *</Label>
+              <Select value={formData.zona || "0"} onValueChange={(value) => handleInputChange("zona", value)}>
+                <SelectTrigger className={errors.zona ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Seleccionar zona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {zonasDisponibles.map((zona) => (
+                    <SelectItem key={zona} value={zona}>
+                      {zona}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.zona && <p className="text-sm text-red-500">{errors.zona}</p>}
+              {zonasDisponibles.length === 0 && <p className="text-sm text-amber-600">No hay zonas disponibles</p>}
+            </div>
+
+            {/* Vehículo (Opcional) */}
+            <div className="space-y-2">
+              <Label htmlFor="vehiculo">Vehículo (Opcional)</Label>
+              <Select
+                value={formData.vehiculoId?.toString() || "0"}
+                onValueChange={(value) => handleInputChange("vehiculoId", value ? Number.parseInt(value) : undefined)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar vehículo (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sin vehículo</SelectItem>
+                  {vehiculosDisponibles.map((vehiculo) => (
+                    <SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
+                      {vehiculo.marca} {vehiculo.modelo} ({vehiculo.patente})
+                      <Badge variant="outline" className="ml-2">
+                        {vehiculo.año}
+                      </Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {vehiculosDisponibles.length === 0 && (
+                <p className="text-sm text-amber-600">No hay vehículos disponibles</p>
+              )}
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-4 pt-4">
+              <Button type="submit" className="flex-1">
+                <Save className="h-4 w-4 mr-2" />
+                Crear Equipo
+              </Button>
+              <Button type="button" variant="outline" onClick={onBack}>
+                <X className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

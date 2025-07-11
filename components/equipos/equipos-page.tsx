@@ -1,302 +1,242 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Users, MapPin, Car, Calendar, AlertTriangle, Edit, Trash2, Eye } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { AppSidebar } from "@/components/app-sidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { equipos as initialEquipos, supervisores, zonas, vehiculos } from "@/data/escuadras-data"
-import type { Equipo } from "@/types/escuadras-types"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { CreateEquipoForm } from "./create-equipo-form"
 import { EquipoDetails } from "./equipo-details"
+import { equipos, supervisores, vehiculos } from "@/data/escuadras-data"
+import { Shield, Users, Car, MapPin, Plus, Search, Eye } from "lucide-react"
+import type { Equipo } from "@/types/escuadras-types"
 
-export default function EquiposPage() {
-  const [equipos, setEquipos] = useState<Equipo[]>(initialEquipos)
+export function EquiposPage() {
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [showDetails, setShowDetails] = useState(false)
-  const [equipoToDissolve, setEquipoToDissolve] = useState<Equipo | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const filteredEquipos = equipos.filter(
+    (equipo) =>
+      equipo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      equipo.zona?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      equipo.supervisor?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      equipo.supervisor?.apellido.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
 
   // Estadísticas
-  const totalEquipos = equipos.length
-  const equiposActivos = equipos.filter((e) => e.activa).length
-  const totalTrabajadores = equipos.reduce((sum, e) => sum + e.trabajadores.length, 0)
+  const equiposActivos = equipos.filter((e) => e.estado === "activo").length
   const supervisoresDisponibles = supervisores.filter(
-    (s) => s.activo && !equipos.some((e) => e.supervisor.id === s.id && e.activa),
+    (s) => s.estado === "activo" && !equipos.some((e) => e.supervisor?.id === s.id),
   ).length
-  const vehiculosDisponibles = vehiculos.filter((v) => v.estado === "disponible").length
-  const zonasDisponibles = zonas.filter((z) => z.activa && !equipos.some((e) => e.zona.id === z.id && e.activa)).length
+  const vehiculosDisponibles = vehiculos.filter(
+    (v) => v.estado === "disponible" && !equipos.some((e) => e.vehiculo?.id === v.id),
+  ).length
+  const zonasDisponibles = ["Zona Norte", "Zona Sur", "Zona Centro", "Zona Este", "Zona Oeste"].filter(
+    (zona) => !equipos.some((e) => e.zona === zona),
+  ).length
 
-  const handleCreateEquipo = (newEquipo: Equipo) => {
-    setEquipos([...equipos, newEquipo])
+  const handleViewDetails = (equipo: Equipo) => {
+    setSelectedEquipo(equipo)
     setShowCreateForm(false)
   }
 
-  const handleDissolveEquipo = (equipoId: number) => {
-    setEquipos(equipos.map((e) => (e.id === equipoId ? { ...e, activa: false } : e)))
-    setEquipoToDissolve(null)
+  const handleCreateNew = () => {
+    setShowCreateForm(true)
+    setSelectedEquipo(null)
   }
 
-  const getStatusColor = (equipo: Equipo) => {
-    if (!equipo.activa) return "bg-gray-100 text-gray-800"
-    if (equipo.trabajadores.length === 0) return "bg-yellow-100 text-yellow-800"
-    if (equipo.trabajadores.length < 2) return "bg-orange-100 text-orange-800"
-    return "bg-green-100 text-green-800"
-  }
-
-  const getStatusText = (equipo: Equipo) => {
-    if (!equipo.activa) return "Disuelto"
-    if (equipo.trabajadores.length === 0) return "Sin personal"
-    if (equipo.trabajadores.length < 2) return "Personal insuficiente"
-    return "Operativo"
+  const handleBackToList = () => {
+    setShowCreateForm(false)
+    setSelectedEquipo(null)
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Equipos</h1>
-          <p className="text-gray-600 mt-1">Administra los equipos de trabajo y sus asignaciones</p>
-        </div>
-        <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus size={16} />
-              Nuevo Equipo
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Crear Nuevo Equipo</DialogTitle>
-              <DialogDescription>
-                Configura un nuevo equipo asignando supervisor, trabajadores, zona y vehículo
-              </DialogDescription>
-            </DialogHeader>
-            <CreateEquipoForm onSubmit={handleCreateEquipo} onCancel={() => setShowCreateForm(false)} />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Equipos</p>
-                <p className="text-2xl font-bold">{totalEquipos}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Activos</p>
-                <p className="text-2xl font-bold text-green-600">{equiposActivos}</p>
-              </div>
-              <div className="h-3 w-3 bg-green-500 rounded-full"></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Trabajadores</p>
-                <p className="text-2xl font-bold">{totalTrabajadores}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Supervisores Libres</p>
-                <p className="text-2xl font-bold">{supervisoresDisponibles}</p>
-              </div>
-              <div className="h-3 w-3 bg-blue-500 rounded-full"></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Vehículos Libres</p>
-                <p className="text-2xl font-bold">{vehiculosDisponibles}</p>
-              </div>
-              <Car className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Zonas Libres</p>
-                <p className="text-2xl font-bold">{zonasDisponibles}</p>
-              </div>
-              <MapPin className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Alertas */}
-      {(supervisoresDisponibles === 0 || vehiculosDisponibles === 0 || zonasDisponibles === 0) && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {supervisoresDisponibles === 0 && "No hay supervisores disponibles para nuevos equipos. "}
-            {vehiculosDisponibles === 0 && "No hay vehículos disponibles para nuevos equipos. "}
-            {zonasDisponibles === 0 && "No hay zonas disponibles para nuevos equipos. "}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Lista de Equipos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {equipos.map((equipo) => (
-          <Card key={equipo.id} className={`${!equipo.activa ? "opacity-60" : ""}`}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
+    <SidebarProvider>
+      <div className="flex h-screen bg-gray-100">
+        <AppSidebar />
+        <SidebarInset className="flex-1">
+          <div className="flex flex-col h-full">
+            <header className="bg-white shadow-sm p-4 border-b">
+              <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">{equipo.nombre}</CardTitle>
-                  <CardDescription className="mt-1">{equipo.descripcion || "Sin descripción"}</CardDescription>
+                  <h1 className="text-2xl font-bold text-gray-900">Gestión de Equipos</h1>
+                  <p className="text-gray-600">Administra los equipos de trabajo y sus asignaciones</p>
                 </div>
-                <Badge className={getStatusColor(equipo)}>{getStatusText(equipo)}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Supervisor */}
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-blue-500" />
-                <span className="text-sm">
-                  <strong>Supervisor:</strong> {equipo.supervisor.nombre} {equipo.supervisor.apellido}
-                </span>
-              </div>
-
-              {/* Trabajadores */}
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-purple-500" />
-                <span className="text-sm">
-                  <strong>Trabajadores:</strong> {equipo.trabajadores.length}/4
-                </span>
-              </div>
-
-              {/* Zona */}
-              <div className="flex items-center gap-2">
-                <MapPin size={16} className="text-green-500" />
-                <span className="text-sm">
-                  <strong>Zona:</strong> {equipo.zona.nombre}
-                </span>
-              </div>
-
-              {/* Vehículo */}
-              <div className="flex items-center gap-2">
-                <Car size={16} className="text-orange-500" />
-                <span className="text-sm">
-                  <strong>Vehículo:</strong> {equipo.vehiculo.marca} {equipo.vehiculo.modelo} ({equipo.vehiculo.patente}
-                  )
-                </span>
-              </div>
-
-              {/* Fecha de creación */}
-              <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-gray-500" />
-                <span className="text-sm">
-                  <strong>Creado:</strong> {equipo.fechaCreacion.toLocaleDateString("es-CL")}
-                </span>
-              </div>
-
-              {/* Acciones */}
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedEquipo(equipo)
-                    setShowDetails(true)
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <Eye size={14} />
-                  Ver
+                <Button onClick={handleCreateNew} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Crear Equipo
                 </Button>
-
-                {equipo.activa && (
-                  <>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <Edit size={14} />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setEquipoToDissolve(equipo)}
-                      className="flex items-center gap-1"
-                    >
-                      <Trash2 size={14} />
-                      Disolver
-                    </Button>
-                  </>
-                )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </header>
 
-      {/* Dialog para ver detalles */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Detalles del Equipo</DialogTitle>
-          </DialogHeader>
-          {selectedEquipo && <EquipoDetails equipo={selectedEquipo} />}
-        </DialogContent>
-      </Dialog>
+            <main className="flex-1 overflow-auto p-6">
+              {showCreateForm ? (
+                <CreateEquipoForm onBack={handleBackToList} />
+              ) : selectedEquipo ? (
+                <EquipoDetails equipo={selectedEquipo} onBack={handleBackToList} />
+              ) : (
+                <div className="space-y-6">
+                  {/* Estadísticas */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Equipos Activos</p>
+                            <p className="text-2xl font-bold">{equiposActivos}</p>
+                          </div>
+                          <Shield className="h-8 w-8 text-blue-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
 
-      {/* Dialog para confirmar disolución */}
-      <Dialog open={!!equipoToDissolve} onOpenChange={() => setEquipoToDissolve(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Disolución</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas disolver el equipo "{equipoToDissolve?.nombre}"? Esta acción liberará todos
-              los recursos asignados (supervisor, trabajadores, zona y vehículo).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setEquipoToDissolve(null)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={() => equipoToDissolve && handleDissolveEquipo(equipoToDissolve.id)}>
-              Disolver Equipo
-            </Button>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Supervisores Disponibles</p>
+                            <p className="text-2xl font-bold">{supervisoresDisponibles}</p>
+                          </div>
+                          <Users className="h-8 w-8 text-green-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Vehículos Disponibles</p>
+                            <p className="text-2xl font-bold">{vehiculosDisponibles}</p>
+                          </div>
+                          <Car className="h-8 w-8 text-orange-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Zonas Disponibles</p>
+                            <p className="text-2xl font-bold">{zonasDisponibles}</p>
+                          </div>
+                          <MapPin className="h-8 w-8 text-purple-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Búsqueda y Lista */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>Lista de Equipos</CardTitle>
+                          <CardDescription>Gestiona y visualiza todos los equipos de trabajo</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              placeholder="Buscar equipos..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-10 w-64"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredEquipos.map((equipo) => (
+                          <Card key={equipo.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <h3 className="font-semibold text-lg">{equipo.nombre}</h3>
+                                  <Badge
+                                    variant={equipo.estado === "activo" ? "default" : "secondary"}
+                                    className="mt-1"
+                                  >
+                                    {equipo.estado}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewDetails(equipo)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  Ver
+                                </Button>
+                              </div>
+
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-4 w-4 text-gray-400" />
+                                  <span>
+                                    {equipo.supervisor
+                                      ? `${equipo.supervisor.nombre} ${equipo.supervisor.apellido}`
+                                      : "Sin supervisor"}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-gray-400" />
+                                  <span>{equipo.zona || "Sin zona asignada"}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4 text-gray-400" />
+                                  <span>
+                                    {equipo.vehiculo
+                                      ? `${equipo.vehiculo.marca} ${equipo.vehiculo.modelo} (${equipo.vehiculo.patente})`
+                                      : "Sin vehículo"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+                                Creado: {equipo.fechaCreacion.toLocaleDateString()}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+
+                      {filteredEquipos.length === 0 && (
+                        <div className="text-center py-8">
+                          <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron equipos</h3>
+                          <p className="text-gray-500 mb-4">
+                            {searchTerm
+                              ? "No hay equipos que coincidan con tu búsqueda."
+                              : "Aún no hay equipos creados."}
+                          </p>
+                          {!searchTerm && (
+                            <Button onClick={handleCreateNew}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Crear primer equipo
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </main>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   )
 }
+
+export default EquiposPage

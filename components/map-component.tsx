@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Loader } from "@googlemaps/js-api-loader"
-import type { google as GoogleMapsApi } from "@googlemaps/js-api-loader" // Renombrado para evitar conflicto
+import type { google as GoogleMapsApi } from "@googlemaps/js-api-loader"
 import { greenAreas } from "@/data/green-areas"
 import { MapPin, Search, X } from "lucide-react"
-import type { Vehiculo, Escuadra } from "@/types/escuadras-types" // Importar tipos
+import type { Vehiculo, Equipo } from "@/types/escuadras-types"
 import type { TrackingData } from "@/types/tracking-types"
-import { generateVehicleTracking, updateVehiclePosition } from "@/data/tracking-data"
+import { useTracking } from "@/context/tracking-context"
 
-// Declarar el tipo para el objeto google global
 declare global {
   interface Window {
     google: typeof GoogleMapsApi
@@ -18,7 +17,7 @@ declare global {
 
 interface MapComponentProps {
   vehiculos: Vehiculo[]
-  escuadras: Escuadra[]
+  escuadras: Equipo[]
 }
 
 export default function MapComponent({ vehiculos, escuadras }: MapComponentProps) {
@@ -32,27 +31,19 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
   const [showAreaList, setShowAreaList] = useState(false)
   const [filteredAreas, setFilteredAreas] = useState(greenAreas)
 
-  const [vehicleTrackings, setVehicleTrackings] = useState<Record<number, TrackingData>>({})
   const vehicleMarkersRef = useRef<Record<number, GoogleMapsApi.maps.Marker | null>>({})
+  const { vehicleTrackings } = useTracking()
 
   useEffect(() => {
     const fetchApiKey = async () => {
       try {
         const res = await fetch("/api/get-map-key")
-        const contentType = res.headers.get("content-type") ?? ""
-        if (!res.ok || !contentType.includes("application/json")) {
-          throw new Error(`Status ${res.status}`)
-        }
-        const { apiKey: fetchedApiKey } = (await res.json()) as {
-          apiKey?: string
-        }
-        if (!fetchedApiKey) {
-          throw new Error("Respuesta sin apiKey")
-        }
+        const { apiKey: fetchedApiKey } = (await res.json()) as { apiKey?: string }
+        if (!fetchedApiKey) throw new Error("API key not found")
         setApiKey(fetchedApiKey)
       } catch (err) {
-        console.error("Error al obtener la clave de API:", err)
-        setMapError("No se pudo obtener la clave de API de Google Maps")
+        console.error("Error fetching API key:", err)
+        setMapError("Could not get Google Maps API key")
       }
     }
     fetchApiKey()
@@ -74,7 +65,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
         scale: 7,
-        fillColor: "#70757A", // Gris
+        fillColor: "#70757A",
         fillOpacity: 0.8,
         strokeWeight: 1,
         strokeColor: "#ffffff",
@@ -85,7 +76,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
         scale: 7,
-        fillColor: "#FBBC04", // Amarillo
+        fillColor: "#FBBC04",
         fillOpacity: 1,
         strokeWeight: 1,
         strokeColor: "#ffffff",
@@ -96,14 +87,13 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
       path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
       scale: 5,
       rotation: trackingData.currentPosition.heading,
-      fillColor: "#1A73E8", // Azul
+      fillColor: "#1A73E8",
       fillOpacity: 1,
       strokeWeight: 1,
       strokeColor: "#ffffff",
     }
   }
 
-  // Efecto para cargar el mapa y las áreas verdes
   useEffect(() => {
     if (!mapRef.current || !apiKey) return
 
@@ -169,10 +159,6 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
           polygon.addListener("click", () => centerMapOnArea(area))
         })
 
-        const centerControlDiv = document.createElement("div")
-        const centerControl = createCenterControl(mapInstance)
-        centerControlDiv.appendChild(centerControl)
-        mapInstance.controls[google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv)
         setIsMapReady(true)
       })
       .catch((error) => {
@@ -185,92 +171,6 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
     }
   }, [apiKey])
 
-  // Efecto para inicializar tracking y marcadores de vehículos
-  useEffect(() => {
-    if (!isMapReady || !mapInstanceRef.current || vehiculos.length === 0) return
-    const map = mapInstanceRef.current
-
-    const initialTrackings: Record<number, TrackingData> = {}
-    const currentMarkers = vehicleMarkersRef.current
-
-    vehiculos.forEach((v) => {
-      if (v.estado === "en_uso") {
-        const trackingData = vehicleTrackings[v.id] || generateVehicleTracking(v.id)
-        initialTrackings[v.id] = trackingData
-
-        if (window.google && map) {
-          if (currentMarkers[v.id]) {
-            // Si ya existe, solo actualiza
-            currentMarkers[v.id]?.setPosition({
-              lat: trackingData.currentPosition.lat,
-              lng: trackingData.currentPosition.lng,
-            })
-            currentMarkers[v.id]?.setIcon(getVehicleIcon(trackingData, v))
-          } else {
-            // Si no existe, créalo
-            const marker = new window.google.maps.Marker({
-              position: {
-                lat: trackingData.currentPosition.lat,
-                lng: trackingData.currentPosition.lng,
-              },
-              map: map,
-              icon: getVehicleIcon(trackingData, v),
-              title: `Vehículo: ${v.patente}`,
-              zIndex: 2, // Para que estén sobre los polígonos
-            })
-
-            marker.addListener("click", () => {
-              if (infoWindowRef.current && map) {
-                const escuadraAsignada = escuadras.find((esc) => esc.vehiculo?.id === v.id)
-                infoWindowRef.current.setContent(
-                  `<div style="padding: 8px; max-width: 250px;">
-                     <h4 style="font-weight: bold; margin-bottom: 5px;">Vehículo: ${v.patente}</h4>
-                     <p>Marca: ${v.marca} ${v.modelo} (${v.año})</p>
-                     <p>Velocidad: ${trackingData.currentPosition.speed.toFixed(1)} km/h</p>
-                     <p>Estado: ${trackingData.currentPosition.status}</p>
-                     ${escuadraAsignada ? `<p>Escuadra: ${escuadraAsignada.nombre}</p>` : ""}
-                     <p style="font-size: 0.8rem;">Última act.: ${trackingData.lastUpdate.toLocaleTimeString()}</p>
-                   </div>`,
-                )
-                infoWindowRef.current.open(map, marker)
-              }
-            })
-            currentMarkers[v.id] = marker
-          }
-        }
-      } else {
-        // Si no está en uso, asegúrate de que no haya marcador
-        if (currentMarkers[v.id]) {
-          currentMarkers[v.id]?.setMap(null)
-          currentMarkers[v.id] = null
-        }
-      }
-    })
-    setVehicleTrackings(initialTrackings)
-    vehicleMarkersRef.current = currentMarkers
-  }, [isMapReady, vehiculos, escuadras]) // Depender de escuadras también
-
-  // Efecto para el intervalo de actualización de vehículos
-  useEffect(() => {
-    if (!isMapReady || vehiculos.length === 0) return
-
-    const intervalId = setInterval(() => {
-      setVehicleTrackings((prevTrackings) => {
-        const newTrackings = { ...prevTrackings }
-        vehiculos.forEach((v) => {
-          if (v.estado === "en_uso" && prevTrackings[v.id]) {
-            const updatedTracking = updateVehiclePosition(prevTrackings[v.id])
-            newTrackings[v.id] = updatedTracking
-          }
-        })
-        return newTrackings
-      })
-    }, 5000) // Actualizar cada 5 segundos
-
-    return () => clearInterval(intervalId)
-  }, [isMapReady, vehiculos])
-
-  // Efecto para actualizar los marcadores cuando vehicleTrackings cambia
   useEffect(() => {
     if (!isMapReady || !mapInstanceRef.current) return
     const map = mapInstanceRef.current
@@ -279,82 +179,51 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
       const vehicleId = Number.parseInt(vehicleIdStr, 10)
       const trackingData = vehicleTrackings[vehicleId]
       const vehicle = vehiculos.find((v) => v.id === vehicleId)
+      let marker = vehicleMarkersRef.current[vehicleId]
 
-      if (trackingData && vehicle) {
-        const marker = vehicleMarkersRef.current[vehicleId]
-        if (vehicle.estado === "en_uso") {
-          if (marker && window.google) {
-            marker.setPosition({
-              lat: trackingData.currentPosition.lat,
-              lng: trackingData.currentPosition.lng,
-            })
-            marker.setIcon(getVehicleIcon(trackingData, vehicle))
+      if (trackingData && vehicle && vehicle.estado === "en_uso") {
+        const position = {
+          lat: trackingData.currentPosition.lat,
+          lng: trackingData.currentPosition.lng,
+        }
+        const icon = getVehicleIcon(trackingData, vehicle)
 
-            if (
-              infoWindowRef.current &&
-              infoWindowRef.current.getMap() && // Check if InfoWindow is open
-              (infoWindowRef.current.getAnchor() === marker || // Check if anchored to this marker (Google Maps API v3 style)
-                (infoWindowRef.current as any).anchor === marker) // Check anchor for newer API versions if applicable
-            ) {
-              const escuadraAsignada = escuadras.find((esc) => esc.vehiculo?.id === vehicle.id)
+        if (marker) {
+          marker.setPosition(position)
+          marker.setIcon(icon)
+        } else {
+          marker = new window.google.maps.Marker({
+            position,
+            map,
+            icon,
+            title: `Vehículo: ${vehicle.patente}`,
+            zIndex: 2,
+          })
+
+          marker.addListener("click", () => {
+            if (infoWindowRef.current && map) {
+              const equipoAsignado = escuadras.find((esc) => esc.vehiculo?.id === vehicle.id)
               infoWindowRef.current.setContent(
                 `<div style="padding: 8px; max-width: 250px;">
                    <h4 style="font-weight: bold; margin-bottom: 5px;">Vehículo: ${vehicle.patente}</h4>
                    <p>Marca: ${vehicle.marca} ${vehicle.modelo} (${vehicle.año})</p>
                    <p>Velocidad: ${trackingData.currentPosition.speed.toFixed(1)} km/h</p>
                    <p>Estado: ${trackingData.currentPosition.status}</p>
-                   ${escuadraAsignada ? `<p>Escuadra: ${escuadraAsignada.nombre}</p>` : ""}
+                   ${equipoAsignado ? `<p>Equipo: ${equipoAsignado.nombre}</p>` : ""}
                    <p style="font-size: 0.8rem;">Última act.: ${trackingData.lastUpdate.toLocaleTimeString()}</p>
                  </div>`,
               )
+              infoWindowRef.current.open(map, marker)
             }
-          } else if (!marker && window.google && map && vehicle.estado === "en_uso") {
-            // Crear marcador si no existe y debe estar
-            const newMarker = new window.google.maps.Marker({
-              position: { lat: trackingData.currentPosition.lat, lng: trackingData.currentPosition.lng },
-              map: map,
-              icon: getVehicleIcon(trackingData, vehicle),
-              title: `Vehículo: ${vehicle.patente}`,
-              zIndex: 2,
-            })
-            newMarker.addListener("click", () => {
-              /* ... Lógica del InfoWindow ... */
-            })
-            vehicleMarkersRef.current[vehicleId] = newMarker
-          }
-        } else {
-          // Vehículo no está en uso, remover marcador
-          if (marker) {
-            marker.setMap(null)
-            vehicleMarkersRef.current[vehicleId] = null
-          }
+          })
+          vehicleMarkersRef.current[vehicleId] = marker
         }
+      } else if (marker) {
+        marker.setMap(null)
+        vehicleMarkersRef.current[vehicleId] = null
       }
     })
-  }, [vehicleTrackings, isMapReady, vehiculos, escuadras])
-
-  function createCenterControl(map: GoogleMapsApi.maps.Map) {
-    const controlButton = document.createElement("button")
-    Object.assign(controlButton.style, {
-      backgroundColor: "#fff",
-      border: "2px solid #ccc",
-      borderRadius: "3px",
-      boxShadow: "0 2px 6px rgba(0,0,0,.3)",
-      color: "rgb(25,25,25)",
-      cursor: "pointer",
-      fontFamily: "Roboto,Arial,sans-serif",
-      fontSize: "16px",
-      lineHeight: "38px",
-      margin: "8px",
-      padding: "0 5px",
-      textAlign: "center",
-    })
-    controlButton.textContent = "Ver todas las áreas"
-    controlButton.title = "Haz clic para ver todas las áreas verdes"
-    controlButton.type = "button"
-    controlButton.addEventListener("click", () => showAllAreas())
-    return controlButton
-  }
+  }, [isMapReady, vehicleTrackings, vehiculos, escuadras])
 
   const centerMapOnArea = (area: (typeof greenAreas)[0]) => {
     if (!mapInstanceRef.current || !window.google) return
@@ -460,7 +329,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
         className="w-full h-[500px] bg-gray-100"
         style={{ visibility: isMapReady ? "visible" : "hidden" }}
       ></div>
-      {(!isMapReady || !apiKey) && !mapError && (
+      {!isMapReady && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <div className="text-center">
             <div

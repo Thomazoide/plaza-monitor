@@ -1,263 +1,260 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Users, MapPin, Car, Calendar, Phone, Mail, Fuel, Wrench } from "lucide-react"
-import type { Equipo } from "@/types/escuadras-types"
-import { VehicleTrackingMap } from "../tracking/vehicle-tracking-map"
+import type React from "react"
+
 import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { VehicleTrackingMap } from "@/components/tracking/vehicle-tracking-map"
+import { ArrowLeft, Edit, MapPin, Users, Car, Calendar, Phone, Mail, Shield } from "lucide-react"
+import { trabajadores } from "@/data/escuadras-data"
+import type { Equipo } from "@/types/escuadras-types"
 
 interface EquipoDetailsProps {
   equipo: Equipo
+  onBack: () => void
 }
 
-export function EquipoDetails({ equipo }: EquipoDetailsProps) {
-  const [showTracking, setShowTracking] = useState(false)
+export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
+  const [activeTab, setActiveTab] = useState("general")
 
-  const getStatusColor = (equipo: Equipo) => {
-    if (!equipo.activa) return "bg-gray-100 text-gray-800"
-    if (equipo.trabajadores.length === 0) return "bg-yellow-100 text-yellow-800"
-    if (equipo.trabajadores.length < 2) return "bg-orange-100 text-orange-800"
-    return "bg-green-100 text-green-800"
-  }
-
-  const getStatusText = (equipo: Equipo) => {
-    if (!equipo.activa) return "Disuelto"
-    if (equipo.trabajadores.length === 0) return "Sin personal"
-    if (equipo.trabajadores.length < 2) return "Personal insuficiente"
-    return "Operativo"
-  }
-
-  const getVehicleStatusColor = (estado: string) => {
-    switch (estado) {
-      case "disponible":
-        return "bg-green-100 text-green-800"
-      case "en_uso":
-        return "bg-blue-100 text-blue-800"
-      case "mantenimiento":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getVehicleStatusText = (estado: string) => {
-    switch (estado) {
-      case "disponible":
-        return "Disponible"
-      case "en_uso":
-        return "En uso"
-      case "mantenimiento":
-        return "Mantenimiento"
-      default:
-        return "Desconocido"
-    }
-  }
-
-  const getFuelColor = (combustible: number) => {
-    if (combustible >= 70) return "text-green-600"
-    if (combustible >= 30) return "text-yellow-600"
-    return "text-red-600"
-  }
+  // Obtener trabajadores asignados a este equipo
+  const trabajadoresEquipo = trabajadores.filter((t) => t.equipoId === equipo.id)
 
   return (
-    <div className="space-y-6 h-screen overflow-auto">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-2xl font-bold">{equipo.nombre}</h2>
-          {equipo.descripcion && <p className="text-gray-600 mt-1">{equipo.descripcion}</p>}
+    <div className="max-w-6xl mx-auto">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={onBack} className="mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver a la lista
+        </Button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{equipo.nombre}</h1>
+            <p className="text-gray-600">Detalles y gestión del equipo</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={equipo.estado === "activo" ? "default" : "secondary"}>{equipo.estado}</Badge>
+            <Button>
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+          </div>
         </div>
-        <Badge className={getStatusColor(equipo)}>{getStatusText(equipo)}</Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Información General */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Información General
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <span className="font-medium">Fecha de creación:</span>
-              <p className="text-gray-600">{equipo.fechaCreacion.toLocaleDateString("es-CL")}</p>
-            </div>
-            <div>
-              <span className="font-medium">Estado:</span>
-              <p className="text-gray-600">{getStatusText(equipo)}</p>
-            </div>
-            <div>
-              <span className="font-medium">Personal asignado:</span>
-              <p className="text-gray-600">
-                {equipo.trabajadores.length + 1} personas (1 supervisor + {equipo.trabajadores.length} trabajadores)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general">Información General</TabsTrigger>
+          <TabsTrigger value="personal">Personal</TabsTrigger>
+          <TabsTrigger value="vehiculo">Vehículo</TabsTrigger>
+          <TabsTrigger value="seguimiento" disabled={!equipo.vehiculo}>
+            Seguimiento
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Supervisor */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Supervisor
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <span className="font-medium">Nombre:</span>
-              <p className="text-gray-600">
-                {equipo.supervisor.nombre} {equipo.supervisor.apellido}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium">RUT:</span>
-              <p className="text-gray-600">{equipo.supervisor.rut}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">{equipo.supervisor.telefono}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">{equipo.supervisor.email}</span>
-            </div>
-            <div>
-              <span className="font-medium">Experiencia:</span>
-              <p className="text-gray-600">{equipo.supervisor.experiencia} años</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trabajadores */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Trabajadores ({equipo.trabajadores.length}/4)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {equipo.trabajadores.length > 0 ? (
-              <div className="space-y-3">
-                {equipo.trabajadores.map((trabajador, index) => (
-                  <div key={trabajador.id}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">
-                          {trabajador.nombre} {trabajador.apellido}
-                        </p>
-                        <p className="text-sm text-gray-600">{trabajador.rut}</p>
-                        <div className="flex items-center gap-4 mt-1">
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">{trabajador.telefono}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {index < equipo.trabajadores.length - 1 && <Separator className="mt-3" />}
+        <TabsContent value="general" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Información del Equipo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Nombre</Label>
+                  <p className="text-lg font-semibold">{equipo.nombre}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Estado</Label>
+                  <div className="mt-1">
+                    <Badge variant={equipo.estado === "activo" ? "default" : "secondary"}>{equipo.estado}</Badge>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">No hay trabajadores asignados</p>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
+                  <p className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {equipo.fechaCreacion.toLocaleDateString()}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Zona Asignada */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Zona Asignada
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <span className="font-medium">Nombre:</span>
-              <p className="text-gray-600">{equipo.zona.nombre}</p>
-            </div>
-            <div>
-              <span className="font-medium">Descripción:</span>
-              <p className="text-gray-600">{equipo.zona.descripcion}</p>
-            </div>
-            <div>
-              <span className="font-medium">Estado:</span>
-              <Badge className={equipo.zona.activa ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                {equipo.zona.activa ? "Activa" : "Inactiva"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Zona de Trabajo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Zona Asignada</Label>
+                  <p className="text-lg font-semibold">{equipo.zona || "Sin zona asignada"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        {/* Vehículo Asignado */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Car className="h-5 w-5" />
-              Vehículo Asignado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <span className="font-medium">Vehículo:</span>
-              <p className="text-gray-600">
-                {equipo.vehiculo.marca} {equipo.vehiculo.modelo} ({equipo.vehiculo.año})
-              </p>
-            </div>
-            <div>
-              <span className="font-medium">Patente:</span>
-              <p className="text-gray-600 font-mono">{equipo.vehiculo.patente}</p>
-            </div>
-            <div>
-              <span className="font-medium">Tipo:</span>
-              <p className="text-gray-600 capitalize">{equipo.vehiculo.tipo}</p>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Estado:</span>
-              <Badge className={getVehicleStatusColor(equipo.vehiculo.estado)}>
-                {getVehicleStatusText(equipo.vehiculo.estado)}
-              </Badge>
-            </div>
-            <div className="mt-3">
-              <Button
-                onClick={() => setShowTracking(!showTracking)}
-                className="w-full flex items-center justify-center gap-2"
-                variant={showTracking ? "secondary" : "default"}
-              >
-                <MapPin size={16} />
-                {showTracking ? "Ocultar Seguimiento" : "Ver Seguimiento en Tiempo Real"}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Fuel className="h-4 w-4 text-gray-500" />
-              <span className="font-medium">Combustible:</span>
-              <span className={`font-bold ${getFuelColor(equipo.vehiculo.combustible)}`}>
-                {equipo.vehiculo.combustible}%
-              </span>
-            </div>
-            {equipo.vehiculo.estado === "mantenimiento" && (
-              <div className="flex items-center gap-2 p-2 bg-red-50 rounded-md">
-                <Wrench className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-700">Vehículo en mantenimiento</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      {/* Tracking del Vehículo */}
-      {showTracking && (
-        <div className="md:col-span-2">
-          <VehicleTrackingMap vehiculo={equipo.vehiculo} />
-        </div>
-      )}
+        <TabsContent value="personal" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Supervisor */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Supervisor
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {equipo.supervisor ? (
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Nombre Completo</Label>
+                      <p className="font-semibold">
+                        {equipo.supervisor.nombre} {equipo.supervisor.apellido}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">RUT</Label>
+                      <p>{equipo.supervisor.rut}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Teléfono</Label>
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        {equipo.supervisor.telefono}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Email</Label>
+                      <p className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        {equipo.supervisor.email}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Fecha de Ingreso</Label>
+                      <p>{equipo.supervisor.fechaIngreso.toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Sin supervisor asignado</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Trabajadores */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Trabajadores ({trabajadoresEquipo.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {trabajadoresEquipo.length > 0 ? (
+                  <div className="space-y-4">
+                    {trabajadoresEquipo.map((trabajador) => (
+                      <div key={trabajador.id} className="p-3 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-semibold">
+                            {trabajador.nombre} {trabajador.apellido}
+                          </p>
+                          <Badge variant="outline">{trabajador.estado}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">{trabajador.rut}</p>
+                        <p className="text-sm text-gray-600">{trabajador.telefono}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Sin trabajadores asignados</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="vehiculo" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="h-5 w-5" />
+                Vehículo Asignado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {equipo.vehiculo ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Patente</Label>
+                      <p className="text-lg font-semibold">{equipo.vehiculo.patente}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Marca y Modelo</Label>
+                      <p className="font-semibold">
+                        {equipo.vehiculo.marca} {equipo.vehiculo.modelo}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Año</Label>
+                      <p>{equipo.vehiculo.año}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Tipo</Label>
+                      <p className="capitalize">{equipo.vehiculo.tipo}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Estado</Label>
+                      <Badge variant={equipo.vehiculo.estado === "en_uso" ? "default" : "secondary"}>
+                        {equipo.vehiculo.estado}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">Sin vehículo asignado</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="seguimiento" className="space-y-6">
+          {equipo.vehiculo ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Seguimiento en Tiempo Real</CardTitle>
+                <CardDescription>Ubicación y estado actual del vehículo {equipo.vehiculo.patente}</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="h-[600px]">
+                  <VehicleTrackingMap />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Car className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Sin vehículo asignado</h3>
+                <p className="text-gray-500">Este equipo no tiene un vehículo asignado para realizar seguimiento.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
+}
+
+function Label({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <label className={className}>{children}</label>
 }

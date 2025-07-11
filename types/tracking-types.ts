@@ -1,5 +1,4 @@
 export interface VehiclePosition {
-  id: number
   vehiculoId: number
   lat: number
   lng: number
@@ -9,15 +8,6 @@ export interface VehiclePosition {
   status: "moving" | "stopped" | "idle"
 }
 
-export interface VehicleRoute {
-  vehiculoId: number
-  positions: VehiclePosition[]
-  startTime: Date
-  endTime?: Date
-  totalDistance: number // metros
-  averageSpeed: number // km/h
-}
-
 export interface TrackingData {
   currentPosition: VehiclePosition
   route: VehiclePosition[]
@@ -25,4 +15,34 @@ export interface TrackingData {
   lastUpdate: Date
   batteryLevel?: number
   fuelLevel?: number
+}
+
+// Respuesta del socket (sin id y status)
+export interface SocketPositionResponse {
+  vehiculoId: number
+  lat: number
+  lng: number
+  timestamp: string
+  speed: number
+  heading: number
+}
+
+// Respuesta del API de vehículos
+export interface VehicleApiResponse {
+  message: string
+  data: {
+    id: number
+    patente: string
+    marca: string
+    modelo: string
+    latitud: number
+    longitud: number
+    altitud: number
+    velocidad: number
+    heading: number
+    timestamp: string
+    equipoID: number | null
+    beaconID: number | null
+  }
+  error: boolean
 }
