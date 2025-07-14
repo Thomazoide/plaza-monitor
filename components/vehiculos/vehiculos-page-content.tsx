@@ -28,7 +28,7 @@ interface ServerVehiculo {
 
 // Función para obtener los vehículos del servidor
 async function getServerVehiculos(): Promise<ServerVehiculo[]> {
-  const response = await fetch("https://82p8g0bl-8888.brs.devtunnels.ms/vehiculos")
+  const response = await fetch("https://jtfb87sn-8888.brs.devtunnels.ms/vehiculos")
   if (!response.ok) {
     throw new Error("La respuesta de la red no fue exitosa")
   }
