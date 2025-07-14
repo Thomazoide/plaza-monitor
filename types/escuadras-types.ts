@@ -7,19 +7,16 @@ export interface Trabajador {
   email: string
   fechaIngreso: Date
   activo: boolean
-  equipoId?: number // Cambiado de escuadraId
+  equipoId?: number
 }
 
 export interface Supervisor {
   id: number
-  nombre: string
-  apellido: string
+  fullName: string
   rut: string
-  telefono: string
   email: string
-  fechaIngreso: Date
-  activo: boolean
-  experiencia: number // años de experiencia
+  celular: string
+  equipoID?: number
 }
 
 export interface Zona {
@@ -35,22 +32,26 @@ export interface Vehiculo {
   patente: string
   marca: string
   modelo: string
-  año: number
-  tipo: "camioneta" | "camion" | "furgon"
-  estado: "disponible" | "en_uso" | "mantenimiento"
-  combustible: number // porcentaje
+  latitud?: number
+  longitud?: number
+  altitud?: number
+  velocidad: number
+  heading: number
+  timestamp?: Date
+  equipoID?: number
+  beaconID?: number
 }
 
 export interface Equipo {
-  // Cambiado de Escuadra
   id: number
   nombre: string
+  supervisorID: number
   supervisor: Supervisor
-  trabajadores: Trabajador[]
-  zona: Zona
+  empleados?: Trabajador[]
+  vehiculoID: number
   vehiculo: Vehiculo
-  fechaCreacion: Date
-  activa: boolean
+  fechaCreacion?: Date
+  activa?: boolean
   descripcion?: string
 }
 

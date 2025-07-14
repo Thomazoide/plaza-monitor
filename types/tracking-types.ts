@@ -17,12 +17,12 @@ export interface TrackingData {
   fuelLevel?: number
 }
 
-// Respuesta del socket (sin id y status)
+// Respuesta del socket - coincide exactamente con la respuesta del servidor
 export interface SocketPositionResponse {
   vehiculoId: number
   lat: number
   lng: number
-  timestamp: string
+  timestamp: Date
   speed: number
   heading: number
 }

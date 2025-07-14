@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Loader } from "@googlemaps/js-api-loader"
-import type { google as GoogleMapsApi } from "@googlemaps/js-api-loader"
 import { greenAreas } from "@/data/green-areas"
 import { MapPin, Search, X } from "lucide-react"
 import type { Vehiculo, Equipo } from "@/types/escuadras-types"
@@ -11,7 +10,7 @@ import { useTracking } from "@/context/tracking-context"
 
 declare global {
   interface Window {
-    google: typeof GoogleMapsApi
+    google: any
   }
 }
 
@@ -24,14 +23,14 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
   const mapRef = useRef<HTMLDivElement>(null)
   const [mapError, setMapError] = useState<string | null>(null)
   const [isMapReady, setIsMapReady] = useState(false)
-  const infoWindowRef = useRef<GoogleMapsApi.maps.InfoWindow | null>(null)
+  const infoWindowRef = useRef<any>(null)
   const [apiKey, setApiKey] = useState<string>("")
-  const mapInstanceRef = useRef<GoogleMapsApi.maps.Map | null>(null)
+  const mapInstanceRef = useRef<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [showAreaList, setShowAreaList] = useState(false)
   const [filteredAreas, setFilteredAreas] = useState(greenAreas)
 
-  const vehicleMarkersRef = useRef<Record<number, GoogleMapsApi.maps.Marker | null>>({})
+  const vehicleMarkersRef = useRef<Record<number, any>>({})
   const { vehicleTrackings } = useTracking()
 
   useEffect(() => {
@@ -58,10 +57,11 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
     }
   }, [searchTerm])
 
-  function getVehicleIcon(trackingData: TrackingData, vehicle: Vehiculo): GoogleMapsApi.maps.Icon | null {
+  function getVehicleIcon(trackingData: TrackingData, vehicle: Vehiculo): any {
     if (!window.google) return null
 
-    if (vehicle.estado !== "en_uso" || !trackingData.isOnline) {
+    // Si no hay tracking data o no está online, mostrar como desconectado
+    if (!trackingData.isOnline) {
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
         scale: 7,
@@ -72,6 +72,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
       }
     }
 
+    // Si no se está moviendo, mostrar como detenido
     if (trackingData.currentPosition.status !== "moving") {
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
@@ -83,6 +84,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
       }
     }
 
+    // Si se está moviendo, mostrar como activo con dirección
     return {
       path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
       scale: 5,
@@ -141,7 +143,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
             zIndex: 1,
           })
 
-          polygon.addListener("mouseover", (e: GoogleMapsApi.maps.PolyMouseEvent) => {
+          polygon.addListener("mouseover", (e: any) => {
             if (infoWindowRef.current && e.latLng) {
               infoWindowRef.current.setContent(
                 `<div style="padding: 8px; max-width: 250px;">
@@ -178,10 +180,11 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
     Object.keys(vehicleTrackings).forEach((vehicleIdStr) => {
       const vehicleId = Number.parseInt(vehicleIdStr, 10)
       const trackingData = vehicleTrackings[vehicleId]
-      const vehicle = vehiculos.find((v) => v.id === vehicleId)
+      const vehicle = Array.isArray(vehiculos) ? vehiculos.find((v) => v.id === vehicleId) : null
       let marker = vehicleMarkersRef.current[vehicleId]
 
-      if (trackingData && vehicle && vehicle.estado === "en_uso") {
+      // Solo mostrar vehículos que tienen tracking data y están asignados a un equipo
+      if (trackingData && vehicle && vehicle.equipoID) {
         const position = {
           lat: trackingData.currentPosition.lat,
           lng: trackingData.currentPosition.lng,
@@ -206,11 +209,11 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
               infoWindowRef.current.setContent(
                 `<div style="padding: 8px; max-width: 250px;">
                    <h4 style="font-weight: bold; margin-bottom: 5px;">Vehículo: ${vehicle.patente}</h4>
-                   <p>Marca: ${vehicle.marca} ${vehicle.modelo} (${vehicle.año})</p>
+                   <p>Marca: ${vehicle.marca} ${vehicle.modelo}</p>
                    <p>Velocidad: ${trackingData.currentPosition.speed.toFixed(1)} km/h</p>
-                   <p>Estado: ${trackingData.currentPosition.status}</p>
+                   <p>Estado: ${trackingData.currentPosition.status === "moving" ? "En movimiento" : "Detenido"}</p>
                    ${equipoAsignado ? `<p>Equipo: ${equipoAsignado.nombre}</p>` : ""}
-                   <p style="font-size: 0.8rem;">Última act.: ${trackingData.lastUpdate.toLocaleTimeString()}</p>
+                   <p style="font-size: 0.8rem;">Última act.: ${new Date(trackingData.lastUpdate).toISOString()}</p>
                  </div>`,
               )
               infoWindowRef.current.open(map, marker)

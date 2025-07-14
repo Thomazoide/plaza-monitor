@@ -1,13 +1,38 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import Dashboard from "@/components/dashboard"
 import MapComponent from "@/components/map-component"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { TrackingProvider } from "@/context/tracking-context"
-import { equipos, vehiculos } from "@/data/escuadras-data"
+import { getEquipos, getVehiculos } from "@/data/escuadras-data"
+import type { Equipo, Vehiculo } from "@/types/escuadras-types"
 
 export default function HomePage() {
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [equiposData, vehiculosData] = await Promise.all([
+          getEquipos(),
+          getVehiculos()
+        ])
+        setEquipos(equiposData)
+        setVehiculos(vehiculosData)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
   return (
     <TrackingProvider>
       <SidebarProvider>
@@ -22,7 +47,18 @@ export default function HomePage() {
                 <Dashboard />
                 <div className="mt-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
                   <h2 className="text-xl font-bold mb-4 text-gray-800">Mapa General de Áreas y Vehículos</h2>
-                  <MapComponent vehiculos={vehiculos} escuadras={equipos} />
+                  {loading ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="ml-2 text-gray-600">Cargando datos...</span>
+                    </div>
+                  ) : vehiculos.length > 0 ? (
+                    <MapComponent vehiculos={vehiculos} escuadras={equipos} />
+                  ) : (
+                    <div className="flex items-center justify-center h-64">
+                      <span className="text-gray-600">No hay vehículos disponibles</span>
+                    </div>
+                  )}
                 </div>
               </main>
             </div>

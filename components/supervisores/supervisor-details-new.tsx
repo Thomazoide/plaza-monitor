@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserCheck, Phone, CheckCircle, XCircle, Award, Briefcase } from "lucide-react"
+import { UserCheck, Phone, CheckCircle, Briefcase } from "lucide-react"
 import type { Supervisor, Equipo } from "@/types/escuadras-types"
 
 interface SupervisorDetailsProps {
@@ -39,24 +39,23 @@ export function SupervisorDetails({ supervisor, equipos }: SupervisorDetailsProp
               Activo
             </Badge>
           </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-gray-600">Email:</span>
+            <span className="text-gray-800">{supervisor.email}</span>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Phone className="h-4 w-4 text-gray-500" /> Contacto
+          <CardTitle className="flex items-center gap-3">
+            <Phone className="h-6 w-6 text-green-600" />
+            Información de Contacto
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Email:</span>
-            <a href={`mailto:${supervisor.email}`} className="text-sm text-blue-600 hover:underline">
-              {supervisor.email}
-            </a>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-600">Teléfono:</span>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-gray-600">Teléfono:</span>
             <span className="text-sm text-gray-800">{supervisor.celular}</span>
           </div>
         </CardContent>
@@ -64,18 +63,19 @@ export function SupervisorDetails({ supervisor, equipos }: SupervisorDetailsProp
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-gray-500" /> Asignación
+          <CardTitle className="flex items-center gap-3">
+            <Briefcase className="h-6 w-6 text-purple-600" />
+            Asignación de Equipo
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Equipo Asignado:</span>
+            <span className="font-medium text-gray-600">Equipo asignado:</span>
             <Badge variant="secondary">{equipoAsignado ? equipoAsignado.nombre : "No asignado"}</Badge>
           </div>
           {equipoAsignado && (
-            <p className="text-xs text-gray-500 mt-1">
-              Lidera el equipo "{equipoAsignado.nombre}" con vehículo {equipoAsignado.vehiculo?.patente || "sin asignar"}.
+            <p className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">
+              Supervisa el equipo "{equipoAsignado.nombre}".
             </p>
           )}
         </CardContent>
