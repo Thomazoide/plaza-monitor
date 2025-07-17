@@ -12,7 +12,7 @@ const getBackendEndpoint = async (): Promise<string> => {
   } catch (error) {
     console.error('Error fetching backend endpoint:', error)
     // Fallback al endpoint por defecto
-    return process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'https://jtfb87sn-8888.brs.devtunnels.ms'
+    return process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || 'http://localhost:8888'
   }
 }
 
