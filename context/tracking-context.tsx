@@ -2,9 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { TrackingData, VehiclePosition, SocketPositionResponse, VehicleApiResponse } from "@/types/tracking-types"
-import { vehiculos as allVehicles } from "@/data/escuadras-data"
+import { getVehiculos, getVehicleTrackingData } from "@/data/escuadras-data"
 import { generateVehicleTracking, updateVehiclePosition } from "@/data/tracking-data"
-import { socket } from "@/lib/socket"
+import { getSocket } from "@/lib/socket"
+import type { Socket } from "socket.io-client"
 
 interface TrackingContextType {
   vehicleTrackings: Record<number, TrackingData>
@@ -15,22 +16,56 @@ interface TrackingContextType {
 const TrackingContext = createContext<TrackingContextType | undefined>(undefined)
 
 export function TrackingProvider({ children }: { children: ReactNode }) {
-  const [vehicleTrackings, setVehicleTrackings] = useState<Record<number, TrackingData>>(() => {
-    const initialTrackings: Record<number, TrackingData> = {}
-    allVehicles.forEach((v) => {
-      if (v.estado === "en_uso") {
-        initialTrackings[v.id] = generateVehicleTracking(v.id)
-      }
-    })
-    return initialTrackings
-  })
-
+  const [vehicleTrackings, setVehicleTrackings] = useState<Record<number, TrackingData>>({})
   const [isConnected, setIsConnected] = useState(false)
+  const [vehiculosLoaded, setVehiculosLoaded] = useState(false)
+  const [currentSocket, setCurrentSocket] = useState<Socket | null>(null)
+
+  // Inicializar tracking cuando se cargan los vehículos
+  useEffect(() => {
+    const initializeTracking = async () => {
+      try {
+        const vehiculos = await getVehiculos()
+        const initialTrackings: Record<number, TrackingData> = {}
+        
+        // Ensure vehiculos is an array before iterating
+        if (Array.isArray(vehiculos)) {
+          for (const vehiculo of vehiculos) {
+            // Usar datos del backend si están disponibles
+            const trackingData = await getVehicleTrackingData(vehiculo.id)
+            if (trackingData) {
+              initialTrackings[vehiculo.id] = trackingData
+            } else {
+              // Fallback a datos simulados
+              initialTrackings[vehiculo.id] = generateVehicleTracking(vehiculo.id)
+            }
+          }
+        } else {
+          console.warn('getVehiculos() did not return an array:', vehiculos)
+        }
+        
+        setVehicleTrackings(initialTrackings)
+        setVehiculosLoaded(true)
+      } catch (error) {
+        console.error('Error initializing tracking:', error)
+        setVehiculosLoaded(true)
+      }
+    }
+
+    initializeTracking()
+  }, [])
 
   // Función para obtener datos iniciales del vehículo desde el API
   const fetchVehicleData = async (vehicleId: number) => {
     try {
-      const response = await fetch(`https://82p8g0bl-8888.brs.devtunnels.ms/vehiculos/${vehicleId}`)
+      // Obtener el endpoint del backend
+      const endpointResponse = await fetch('/api/get-backend-endpoint')
+      if (!endpointResponse.ok) {
+        throw new Error('Error al obtener el endpoint del backend')
+      }
+      const { endpoint } = await endpointResponse.json()
+
+      const response = await fetch(`${endpoint}/vehiculos/${vehicleId}`)
       const vehicleData: VehicleApiResponse = await response.json()
 
       if (!vehicleData.error && vehicleData.data) {
@@ -62,110 +97,203 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
   // Efecto para la conexión del Socket y las actualizaciones en tiempo real
   useEffect(() => {
-    const connectSocket = () => {
-      if (socket.disconnected) {
-        socket.connect()
-      }
-    }
+    let socket: Socket | null = null
+    let positionInterval: NodeJS.Timeout | null = null
 
-    const handleConnect = () => {
-      console.log("Socket conectado:", socket.id)
-      setIsConnected(true)
-      // Obtener datos iniciales del vehículo 1
-      fetchVehicleData(1)
-    }
+    const setupSocket = async () => {
+      try {
+        socket = await getSocket()
+        setCurrentSocket(socket)
 
-    const handleDisconnect = (reason: string) => {
-      console.log("Socket desconectado:", reason)
-      setIsConnected(false)
-    }
-
-    const handleConnectError = (error: any) => {
-      console.error("Error de conexión del socket:", error)
-      setIsConnected(false)
-    }
-
-    const handlePositionUpdate = (data: SocketPositionResponse) => {
-      console.log("Posición recibida:", data)
-
-      if (data && data.vehiculoId === 1) {
-        setVehicleTrackings((prevTrackings) => {
-          const newTrackings = { ...prevTrackings }
-          const existingTracking = newTrackings[1]
-
-          const newPosition: VehiclePosition = {
-            vehiculoId: data.vehiculoId,
-            lat: data.lat,
-            lng: data.lng,
-            timestamp: new Date(data.timestamp),
-            speed: data.speed,
-            heading: data.heading,
-            status: data.speed > 1 ? "moving" : "stopped",
+        const connectSocket = () => {
+          if (socket && socket.disconnected) {
+            socket.connect()
           }
+        }
 
-          const updatedTrackingData: TrackingData = {
-            currentPosition: newPosition,
-            route: existingTracking ? [...existingTracking.route, newPosition].slice(-100) : [newPosition],
-            isOnline: true,
-            lastUpdate: new Date(),
+        const handleConnect = () => {
+          console.log("Socket conectado:", socket?.id)
+          if (socket?.io?.engine?.transport) {
+            console.log("Socket transport:", socket.io.engine.transport.name)
           }
+          setIsConnected(true)
+          // Obtener datos iniciales del vehículo 1
+          fetchVehicleData(1)
+        }
 
-          newTrackings[1] = updatedTrackingData
-          return newTrackings
+        const handleDisconnect = (reason: string) => {
+          console.log("Socket desconectado:", reason)
+          setIsConnected(false)
+        }
+
+        const handleConnectError = (error: any) => {
+          console.error("Error de conexión del socket:", error)
+          setIsConnected(false)
+        }
+
+        const handlePositionUpdate = (data: SocketPositionResponse) => {
+          console.log("Posición recibida:", data)
+          console.log("Tipo de data:", typeof data)
+          console.log("Data es null/undefined:", data === null || data === undefined)
+
+          if (data && data.vehiculoId) {
+            setVehicleTrackings((prevTrackings) => {
+              const newTrackings = { ...prevTrackings }
+              const existingTracking = newTrackings[data.vehiculoId]
+
+              const newPosition: VehiclePosition = {
+                vehiculoId: data.vehiculoId,
+                lat: data.lat,
+                lng: data.lng,
+                timestamp: new Date(data.timestamp),
+                speed: data.speed,
+                heading: data.heading,
+                status: data.speed > 1 ? "moving" : "stopped",
+              }
+
+              if (existingTracking) {
+                newTrackings[data.vehiculoId] = {
+                  ...existingTracking,
+                  currentPosition: newPosition,
+                  route: [...existingTracking.route, newPosition].slice(-100), // Mantener solo las últimas 100 posiciones
+                  isOnline: true,
+                  lastUpdate: new Date(),
+                }
+              } else {
+                newTrackings[data.vehiculoId] = {
+                  currentPosition: newPosition,
+                  route: [newPosition],
+                  isOnline: true,
+                  lastUpdate: new Date(),
+                }
+              }
+
+              return newTrackings
+            })
+          } else {
+            console.log("Datos inválidos o vehicleId no encontrado:", data?.vehiculoId)
+          }
+        }
+
+        // Configurar eventos del socket
+        socket.on("connect", handleConnect)
+        socket.on("disconnect", handleDisconnect)
+        socket.on("connect_error", handleConnectError)
+        
+        // Escuchar múltiples eventos posibles
+        socket.on("posicion-actualizada", handlePositionUpdate)
+        socket.on("posicion_actualizada", handlePositionUpdate)
+        socket.on("position-updated", handlePositionUpdate)
+        socket.on("position_updated", handlePositionUpdate)
+        socket.on("vehiclePosition", handlePositionUpdate)
+        socket.on("vehicle_position", handlePositionUpdate)
+
+        // Listener para todos los eventos (para debug)
+        socket.onAny((eventName: string, ...args: any[]) => {
+          console.log(`Evento recibido: ${eventName}`, args)
         })
+
+        connectSocket()
+
+        // Intervalo para solicitar posición cada 5 segundos
+        positionInterval = setInterval(() => {
+          if (socket?.connected) {
+            console.log("Solicitando posición del vehículo 1...")
+            console.log("Socket conectado:", socket.connected)
+            console.log("Socket ID:", socket.id)
+            
+            // Probar diferentes mensajes
+            socket.emit("obtener-posicion", { id: 1 })
+            // También probar variaciones por si acaso
+            setTimeout(() => socket?.emit("obtener_posicion", { id: 1 }), 100)
+            setTimeout(() => socket?.emit("get-position", { id: 1 }), 200)
+          } else {
+            console.log("Socket desconectado, intentando reconectar...")
+            connectSocket()
+          }
+        }, 5000)
+
+        return () => {
+          if (positionInterval) {
+            clearInterval(positionInterval)
+          }
+          if (socket) {
+            socket.off("connect", handleConnect)
+            socket.off("disconnect", handleDisconnect)
+            socket.off("connect_error", handleConnectError)
+            socket.off("posicion-actualizada", handlePositionUpdate)
+            socket.off("posicion_actualizada", handlePositionUpdate)
+            socket.off("position-updated", handlePositionUpdate)
+            socket.off("position_updated", handlePositionUpdate)
+            socket.off("vehiclePosition", handlePositionUpdate)
+            socket.off("vehicle_position", handlePositionUpdate)
+            socket.offAny()
+            if (socket.connected) {
+              socket.disconnect()
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error setting up socket:', error)
       }
     }
 
-    // Configurar eventos del socket
-    socket.on("connect", handleConnect)
-    socket.on("disconnect", handleDisconnect)
-    socket.on("connect_error", handleConnectError)
-    socket.on("posicion-actualizada", handlePositionUpdate)
-    socket.on("posicion actualizada", handlePositionUpdate) // nuevo nombre con espacio
-
-    // Conectar el socket
-    connectSocket()
-
-    // Intervalo para solicitar posición cada 5 segundos
-    const positionInterval = setInterval(() => {
-      if (socket.connected) {
-        console.log("Solicitando posición del vehículo 1...")
-        socket.emit("obtener posicion", { id: 1 })
-        // socket.emit("obtener-posicion", { id: 1 })
-      }
-    }, 5000)
-
-    return () => {
-      clearInterval(positionInterval)
-      socket.off("connect", handleConnect)
-      socket.off("disconnect", handleDisconnect)
-      socket.off("connect_error", handleConnectError)
-      socket.off("posicion-actualizada", handlePositionUpdate)
-      socket.off("posicion actualizada", handlePositionUpdate)
-      if (socket.connected) {
-        socket.disconnect()
+    if (vehiculosLoaded) {
+      const cleanup = setupSocket()
+      return () => {
+        cleanup?.then((cleanupFn) => cleanupFn?.())
       }
     }
-  }, [])
+  }, [vehiculosLoaded])
 
-  // Efecto para simular el movimiento de los otros vehículos (no el ID 1)
+  // Efecto para simular el movimiento de los otros vehículos
   useEffect(() => {
-    const simulationInterval = setInterval(() => {
-      setVehicleTrackings((prevTrackings) => {
-        const newTrackings = { ...prevTrackings }
-        allVehicles.forEach((v) => {
-          // Solo simula los que no son el vehículo 1 (que viene del socket)
-          if (v.estado === "en_uso" && v.id !== 1 && prevTrackings[v.id]) {
-            const updatedTracking = updateVehiclePosition(prevTrackings[v.id])
-            newTrackings[v.id] = updatedTracking
+    if (!vehiculosLoaded) return
+
+    const simulationInterval = setInterval(async () => {
+      try {
+        const vehiculos = await getVehiculos()
+        
+        // Ensure vehiculos is an array before iterating
+        if (Array.isArray(vehiculos)) {
+          for (const vehiculo of vehiculos) {
+            if (vehicleTrackings[vehiculo.id]) {
+              // Usar datos del backend si están disponibles
+              try {
+                const backendData = await getVehicleTrackingData(vehiculo.id)
+                if (backendData) {
+                  setVehicleTrackings((prev) => ({
+                    ...prev,
+                    [vehiculo.id]: backendData
+                  }))
+                } else {
+                  // Fallback a simulación
+                  const updatedTracking = updateVehiclePosition(vehicleTrackings[vehiculo.id])
+                  setVehicleTrackings((prev) => ({
+                    ...prev,
+                    [vehiculo.id]: updatedTracking
+                  }))
+                }
+              } catch (error) {
+                // En caso de error, usar simulación
+                const updatedTracking = updateVehiclePosition(vehicleTrackings[vehiculo.id])
+                setVehicleTrackings((prev) => ({
+                  ...prev,
+                  [vehiculo.id]: updatedTracking
+                }))
+              }
+            }
           }
-        })
-        return newTrackings
-      })
+        } else {
+          console.warn('getVehiculos() did not return an array in simulation interval:', vehiculos)
+        }
+      } catch (error) {
+        console.error('Error updating vehicle tracking:', error)
+      }
     }, 5000)
 
     return () => clearInterval(simulationInterval)
-  }, [])
+  }, [vehiculosLoaded, vehicleTrackings])
 
   const getTrackingById = (id: number) => {
     return vehicleTrackings[id]

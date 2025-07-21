@@ -2,7 +2,7 @@
 
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, UserCheck, UserX, Users, Briefcase, Search, Eye, Edit2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,18 +19,40 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { supervisores as initialSupervisores, escuadras } from "@/data/escuadras-data"
-import type { Supervisor } from "@/types/escuadras-types"
+import { getSupervisores, getEquipos } from "@/data/escuadras-data"
+import type { Supervisor, Equipo } from "@/types/escuadras-types"
 import { SupervisorForm } from "./supervisor-form"
 import { SupervisorDetails } from "./supervisor-details"
 
 export function SupervisoresPageContent() {
-  const [supervisores, setSupervisores] = useState<Supervisor[]>(initialSupervisores)
+  const [supervisores, setSupervisores] = useState<Supervisor[]>([])
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [supervisorToEdit, setSupervisorToEdit] = useState<Supervisor | null>(null)
   const [supervisorToView, setSupervisorToView] = useState<Supervisor | null>(null)
   const [supervisorToDelete, setSupervisorToDelete] = useState<Supervisor | null>(null)
+
+  // Cargar supervisores y equipos del backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [supervisoresData, equiposData] = await Promise.all([
+          getSupervisores(),
+          getEquipos()
+        ])
+        setSupervisores(supervisoresData)
+        setEquipos(equiposData)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const handleFormSubmit = (supervisorData: Supervisor) => {
     if (supervisorToEdit) {
@@ -58,45 +80,46 @@ export function SupervisoresPageContent() {
   }
 
   const filteredSupervisores = supervisores.filter((s) =>
-    `${s.nombre} ${s.apellido} ${s.rut} ${s.email}`.toLowerCase().includes(searchTerm.toLowerCase()),
+    `${s.fullName} ${s.rut} ${s.email}`.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  // Estadísticas
+  // Estadísticas (adaptadas a los datos del backend)
   const totalSupervisores = supervisores.length
-  const supervisoresActivos = supervisores.filter((s) => s.activo).length
-  const supervisoresInactivos = totalSupervisores - supervisoresActivos
-  const supervisoresAsignados = escuadras
-    .filter((e) => e.activa && e.supervisor)
-    .map((e) => e.supervisor.id)
-    .filter((value, index, self) => self.indexOf(value) === index).length
-  const supervisoresDisponibles = supervisores.filter(
-    (s) => s.activo && !escuadras.some((e) => e.activa && e.supervisor.id === s.id),
-  ).length
+  const supervisoresActivos = supervisores.length // Asumimos que todos los supervisores del backend están activos
+  const supervisoresInactivos = 0 // No tenemos información de inactivos del backend
+  const supervisoresAsignados = equipos.filter(equipo => equipo.supervisorID).length
+  const supervisoresDisponibles = totalSupervisores - supervisoresAsignados
 
-  const getEscuadraAsignada = (supervisorId: number) => {
-    const escuadraAsignada = escuadras.find((e) => e.supervisor.id === supervisorId && e.activa)
-    return escuadraAsignada ? escuadraAsignada.nombre : "No asignado"
+  const getEquipoAsignado = (supervisorId: number) => {
+    const equipoAsignado = equipos.find((e) => e.supervisorID === supervisorId)
+    return equipoAsignado ? equipoAsignado.nombre : "No asignado"
   }
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Supervisores</h1>
-          <p className="text-gray-600 mt-1">Gestiona el personal de supervisión y sus asignaciones.</p>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Cargando supervisores...</div>
         </div>
-        <Button
-          onClick={() => {
-            setSupervisorToEdit(null)
-            setShowCreateForm(true)
-          }}
-          className="flex items-center gap-2"
-        >
-          <Plus size={16} />
-          Nuevo Supervisor
-        </Button>
-      </div>
+      ) : (
+        <>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Supervisores</h1>
+              <p className="text-gray-600 mt-1">Gestiona el personal de supervisión y sus asignaciones.</p>
+            </div>
+            <Button
+              onClick={() => {
+                setSupervisorToEdit(null)
+                setShowCreateForm(true)
+              }}
+              className="flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Nuevo Supervisor
+            </Button>
+          </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -167,10 +190,10 @@ export function SupervisoresPageContent() {
                     Estado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Experiencia
+                    Teléfono
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Escuadra
+                    Equipo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -182,22 +205,22 @@ export function SupervisoresPageContent() {
                   <tr key={supervisor.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {supervisor.nombre} {supervisor.apellido}
+                        {supervisor.fullName}
                       </div>
                       <div className="text-xs text-gray-500">{supervisor.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{supervisor.rut}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge
-                        variant={supervisor.activo ? "default" : "destructive"}
-                        className={supervisor.activo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                        variant="default"
+                        className="bg-green-100 text-green-800"
                       >
-                        {supervisor.activo ? "Activo" : "Inactivo"}
+                        Activo
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{supervisor.experiencia} años</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{supervisor.celular}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {getEscuadraAsignada(supervisor.id)}
+                      {getEquipoAsignado(supervisor.id)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <Button variant="outline" size="icon" onClick={() => setSupervisorToView(supervisor)}>
@@ -225,8 +248,7 @@ export function SupervisoresPageContent() {
                               <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Esta acción no se puede deshacer. Se eliminará permanentemente al supervisor "
-                                {supervisorToDelete.nombre} {supervisorToDelete.apellido}". Si está asignado a una
-                                escuadra, esta podría quedar sin supervisor.
+                                {supervisorToDelete.fullName}". Si está asignado a un equipo, este podría quedar sin supervisor.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -286,9 +308,11 @@ export function SupervisoresPageContent() {
           <DialogHeader>
             <DialogTitle>Detalles del Supervisor</DialogTitle>
           </DialogHeader>
-          {supervisorToView && <SupervisorDetails supervisor={supervisorToView} escuadras={escuadras} />}
+          {supervisorToView && <SupervisorDetails supervisor={supervisorToView} equipos={equipos} />}
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   )
 }

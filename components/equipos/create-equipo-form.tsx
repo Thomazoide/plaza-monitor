@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, X } from "lucide-react"
-import { supervisores, vehiculos, equipos } from "@/data/escuadras-data"
-import type { CreateEquipoData } from "@/types/escuadras-types"
+import { getSupervisores, getVehiculos, getEquipos } from "@/data/escuadras-data"
+import { getZonas } from "@/data/zonas-data"
+import type { CreateEquipoData, Supervisor, Vehiculo, Equipo, Zona } from "@/types/escuadras-types"
 
 interface CreateEquipoFormProps {
   onBack: () => void
@@ -20,24 +21,56 @@ interface CreateEquipoFormProps {
 export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
   const [formData, setFormData] = useState<CreateEquipoData>({
     nombre: "",
-    supervisorId: undefined,
-    zona: "",
-    vehiculoId: undefined,
+    supervisorId: 0,
+    zonaId: 0,
+    vehiculoId: 0,
+    trabajadorIds: [],
+    descripcion: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [supervisores, setSupervisores] = useState<Supervisor[]>([])
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [zonas, setZonas] = useState<Zona[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Cargar datos del backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [supervisoresData, vehiculosData, equiposData, zonasData] = await Promise.all([
+          getSupervisores(),
+          getVehiculos(),
+          getEquipos(),
+          getZonas()
+        ])
+        setSupervisores(supervisoresData)
+        setVehiculos(vehiculosData)
+        setEquipos(equiposData)
+        setZonas(zonasData)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   // Filtrar supervisores y vehículos disponibles
   const supervisoresDisponibles = supervisores.filter(
-    (s) => s.estado === "activo" && !equipos.some((e) => e.supervisor?.id === s.id),
+    (s) => !equipos.some((e) => e.supervisor?.id === s.id),
   )
 
   const vehiculosDisponibles = vehiculos.filter(
-    (v) => v.estado === "disponible" && !equipos.some((e) => e.vehiculo?.id === v.id),
+    (v) => !equipos.some((e) => e.vehiculo?.id === v.id),
   )
 
-  const zonasDisponibles = ["Zona Norte", "Zona Sur", "Zona Centro", "Zona Este", "Zona Oeste"].filter(
-    (zona) => !equipos.some((e) => e.zona === zona),
+  const zonasDisponibles = zonas.filter(
+    (zona) => zona.activa && !equipos.some((e) => e.supervisor?.id === zona.id),
   )
 
   const validateForm = (): boolean => {
@@ -49,31 +82,62 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
       newErrors.nombre = "Ya existe un equipo con este nombre"
     }
 
-    if (!formData.supervisorId) {
+    if (!formData.supervisorId || formData.supervisorId === 0) {
       newErrors.supervisorId = "Debe seleccionar un supervisor"
     }
 
-    if (!formData.zona) {
-      newErrors.zona = "Debe seleccionar una zona"
+    if (!formData.zonaId || formData.zonaId === 0) {
+      newErrors.zonaId = "Debe seleccionar una zona"
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) {
       return
     }
 
-    // Aquí normalmente enviarías los datos al servidor
-    console.log("Crear equipo:", formData)
+    try {
+      // Obtener el endpoint del backend
+      const endpointResponse = await fetch('/api/get-backend-endpoint')
+      if (!endpointResponse.ok) {
+        throw new Error('Error al obtener el endpoint del backend')
+      }
+      const { endpoint } = await endpointResponse.json()
 
-    // Simular creación exitosa
-    alert("Equipo creado exitosamente")
-    onBack()
+      // Crear el equipo en el backend
+      const response = await fetch(`${endpoint}/equipos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          supervisorID: formData.supervisorId,
+          vehiculoID: formData.vehiculoId || null,
+          descripcion: formData.descripcion,
+          // Agregar otros campos según sea necesario
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al crear el equipo')
+      }
+
+      const nuevoEquipo = await response.json()
+      console.log("Equipo creado:", nuevoEquipo)
+
+      // Mostrar mensaje de éxito
+      alert("Equipo creado exitosamente")
+      onBack()
+    } catch (error) {
+      console.error('Error creating equipo:', error)
+      alert("Error al crear el equipo")
+    }
   }
 
   const handleInputChange = (field: keyof CreateEquipoData, value: string | number | undefined) => {
@@ -101,7 +165,23 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
           <CardDescription>Ingrese los datos básicos del equipo</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {loading ? (
+            <div className="space-y-4">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nombre del Equipo */}
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre del Equipo *</Label>
@@ -120,7 +200,7 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
               <Label htmlFor="supervisor">Supervisor *</Label>
               <Select
                 value={formData.supervisorId?.toString() || "0"}
-                onValueChange={(value) => handleInputChange("supervisorId", value ? Number.parseInt(value) : undefined)}
+                onValueChange={(value) => handleInputChange("supervisorId", value === "0" ? 0 : Number.parseInt(value))}
               >
                 <SelectTrigger className={errors.supervisorId ? "border-red-500" : ""}>
                   <SelectValue placeholder="Seleccionar supervisor" />
@@ -128,7 +208,7 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
                 <SelectContent>
                   {supervisoresDisponibles.map((supervisor) => (
                     <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
-                      {supervisor.nombre} {supervisor.apellido}
+                      {supervisor.fullName}
                       <Badge variant="outline" className="ml-2">
                         {supervisor.rut}
                       </Badge>
@@ -145,19 +225,22 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
             {/* Zona */}
             <div className="space-y-2">
               <Label htmlFor="zona">Zona de Trabajo *</Label>
-              <Select value={formData.zona || "0"} onValueChange={(value) => handleInputChange("zona", value)}>
-                <SelectTrigger className={errors.zona ? "border-red-500" : ""}>
+              <Select 
+                value={formData.zonaId?.toString() || "0"} 
+                onValueChange={(value) => handleInputChange("zonaId", value === "0" ? 0 : Number.parseInt(value))}
+              >
+                <SelectTrigger className={errors.zonaId ? "border-red-500" : ""}>
                   <SelectValue placeholder="Seleccionar zona" />
                 </SelectTrigger>
                 <SelectContent>
                   {zonasDisponibles.map((zona) => (
-                    <SelectItem key={zona} value={zona}>
-                      {zona}
+                    <SelectItem key={zona.id} value={zona.id.toString()}>
+                      {zona.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.zona && <p className="text-sm text-red-500">{errors.zona}</p>}
+              {errors.zonaId && <p className="text-sm text-red-500">{errors.zonaId}</p>}
               {zonasDisponibles.length === 0 && <p className="text-sm text-amber-600">No hay zonas disponibles</p>}
             </div>
 
@@ -166,7 +249,7 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
               <Label htmlFor="vehiculo">Vehículo (Opcional)</Label>
               <Select
                 value={formData.vehiculoId?.toString() || "0"}
-                onValueChange={(value) => handleInputChange("vehiculoId", value ? Number.parseInt(value) : undefined)}
+                onValueChange={(value) => handleInputChange("vehiculoId", value === "0" ? 0 : Number.parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar vehículo (opcional)" />
@@ -176,9 +259,6 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
                   {vehiculosDisponibles.map((vehiculo) => (
                     <SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
                       {vehiculo.marca} {vehiculo.modelo} ({vehiculo.patente})
-                      <Badge variant="outline" className="ml-2">
-                        {vehiculo.año}
-                      </Badge>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -198,8 +278,8 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-            </div>
-          </form>
+            </div>            </form>
+          )}
         </CardContent>
       </Card>
     </div>

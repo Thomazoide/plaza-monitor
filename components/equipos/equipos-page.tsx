@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,34 +9,92 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CreateEquipoForm } from "./create-equipo-form"
 import { EquipoDetails } from "./equipo-details"
-import { equipos, supervisores, vehiculos } from "@/data/escuadras-data"
-import { Shield, Users, Car, MapPin, Plus, Search, Eye } from "lucide-react"
-import type { Equipo } from "@/types/escuadras-types"
+import { getEquipos, getSupervisores, getVehiculos, getTrabajadores } from "@/data/escuadras-data"
+import { Shield, Users, Car, MapPin, Plus, Search, Eye, Loader2 } from "lucide-react"
+import type { Equipo, Supervisor, Vehiculo, Trabajador } from "@/types/escuadras-types"
 
 export function EquiposPage() {
   const [selectedEquipo, setSelectedEquipo] = useState<Equipo | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [supervisores, setSupervisores] = useState<Supervisor[]>([])
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
+  const [trabajadores, setTrabajadores] = useState<Trabajador[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredEquipos = equipos.filter(
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [equiposData, supervisoresData, vehiculosData, trabajadoresData] = await Promise.all([
+          getEquipos(),
+          getSupervisores(),
+          getVehiculos(),
+          getTrabajadores()
+        ])
+        
+        // Ensure all data is arrays
+        setEquipos(Array.isArray(equiposData) ? equiposData : [])
+        setSupervisores(Array.isArray(supervisoresData) ? supervisoresData : [])
+        setVehiculos(Array.isArray(vehiculosData) ? vehiculosData : [])
+        setTrabajadores(Array.isArray(trabajadoresData) ? trabajadoresData : [])
+      } catch (err) {
+        console.error('Error fetching data:', err)
+        setError('Error al cargar los datos')
+        // Set empty arrays in case of error
+        setEquipos([])
+        setSupervisores([])
+        setVehiculos([])
+        setTrabajadores([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  const filteredEquipos = Array.isArray(equipos) ? equipos.filter(
     (equipo) =>
       equipo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (equipo.zona?.nombre ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      equipo.supervisor?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      equipo.supervisor?.apellido.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      equipo.supervisor?.fullName.toLowerCase().includes(searchTerm.toLowerCase()),
+  ) : []
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Cargando datos...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   // Estadísticas
-  const equiposActivos = equipos.filter((e) => e.estado === "activo").length
-  const supervisoresDisponibles = supervisores.filter(
-    (s) => s.estado === "activo" && !equipos.some((e) => e.supervisor?.id === s.id),
-  ).length
-  const vehiculosDisponibles = vehiculos.filter(
-    (v) => v.estado === "disponible" && !equipos.some((e) => e.vehiculo?.id === v.id),
-  ).length
-  const zonasDisponibles = ["Zona Norte", "Zona Sur", "Zona Centro", "Zona Este", "Zona Oeste"].filter(
-    (zona) => !equipos.some((e) => e.zona === zona),
-  ).length
+  const equiposActivos = Array.isArray(equipos) ? equipos.filter((e) => e.activa !== false).length : 0
+  const supervisoresDisponibles = Array.isArray(supervisores) && Array.isArray(equipos) ? supervisores.filter(
+    (s) => !equipos.some((e) => e.supervisorID === s.id),
+  ).length : 0
+  const vehiculosDisponibles = Array.isArray(vehiculos) && Array.isArray(equipos) ? vehiculos.filter(
+    (v) => !equipos.some((e) => e.vehiculoID === v.id),
+  ).length : 0
+  const zonasDisponibles = 3 // Mock data - ajustar según necesidad
 
   const handleViewDetails = (equipo: Equipo) => {
     setSelectedEquipo(equipo)
@@ -160,10 +218,10 @@ export function EquiposPage() {
                                 <div>
                                   <h3 className="font-semibold text-lg">{equipo.nombre}</h3>
                                   <Badge
-                                    variant={equipo.estado === "activo" ? "default" : "secondary"}
+                                    variant={equipo.activa !== false ? "default" : "secondary"}
                                     className="mt-1"
                                   >
-                                    {equipo.estado}
+                                    {equipo.activa !== false ? "Activo" : "Inactivo"}
                                   </Badge>
                                 </div>
                                 <Button
@@ -182,14 +240,14 @@ export function EquiposPage() {
                                   <Users className="h-4 w-4 text-gray-400" />
                                   <span>
                                     {equipo.supervisor
-                                      ? `${equipo.supervisor.nombre} ${equipo.supervisor.apellido}`
+                                      ? equipo.supervisor.fullName
                                       : "Sin supervisor"}
                                   </span>
                                 </div>
 
                                 <div className="flex items-center gap-2">
                                   <MapPin className="h-4 w-4 text-gray-400" />
-                                  <span>{equipo.zona?.nombre ?? "Sin zona asignada"}</span>
+                                  <span>Zona de trabajo asignada</span>
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -203,7 +261,7 @@ export function EquiposPage() {
                               </div>
 
                               <div className="mt-3 pt-3 border-t text-xs text-gray-500">
-                                Creado: {equipo.fechaCreacion.toLocaleDateString()}
+                                Equipo ID: {equipo.id}
                               </div>
                             </CardContent>
                           </Card>

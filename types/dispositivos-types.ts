@@ -1,5 +1,5 @@
 import type { GreenArea } from "./map-types" // Usaremos GreenArea para las plazas
-import type { Escuadra, Vehiculo } from "./escuadras-types"
+import type { Vehiculo, Equipo } from "./escuadras-types"
 
 export type DeviceType = "gateway" | "beacon"
 export type DeviceStatus = "activo" | "inactivo" | "mantenimiento" | "sin asignar"
@@ -23,8 +23,8 @@ export interface GatewayDevice extends BaseDevice {
 
 export interface BeaconDevice extends BaseDevice {
   tipo: "beacon"
-  escuadraId?: string // ID de la escuadra asignada
-  escuadra?: Escuadra // Objeto Escuadra completo
+  equipoId?: string // ID del equipo asignado
+  equipo?: Equipo // Objeto Equipo completo
   vehiculoId?: string // ID del vehículo asignado
   vehiculo?: Vehiculo // Objeto Vehiculo completo
   nivelBateria?: number // Porcentaje 0-100
@@ -43,8 +43,8 @@ export interface AsignarGatewayPlazaProps {
 
 export interface AsignarBeaconProps {
   beacon: BeaconDevice
-  escuadras: Escuadra[]
+  equipos: Equipo[]
   vehiculos: Vehiculo[]
-  onAssign: (beaconId: string, escuadraId: string | null, vehiculoId: string | null) => void
+  onAssign: (beaconId: string, equipoId: string | null, vehiculoId: string | null) => void
   onCancel: () => void
 }

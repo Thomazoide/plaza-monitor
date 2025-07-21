@@ -3,18 +3,18 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Phone, CalendarDays, CheckCircle, XCircle } from "lucide-react"
-import type { Trabajador, Escuadra } from "@/types/escuadras-types"
+import type { Trabajador, Equipo } from "@/types/escuadras-types"
 
 interface TrabajadorDetailsProps {
   trabajador: Trabajador
-  escuadras: Escuadra[]
+  equipos: Equipo[]
 }
 
-export function TrabajadorDetails({ trabajador, escuadras }: TrabajadorDetailsProps) {
-  const getEscuadraNombre = (escuadraId?: number) => {
-    if (!escuadraId) return "No asignado"
-    const escuadra = escuadras.find((e) => e.id === escuadraId)
-    return escuadra ? escuadra.nombre : "Escuadra desconocida"
+export function TrabajadorDetails({ trabajador, equipos }: TrabajadorDetailsProps) {
+  const getEquipoNombre = (equipoId?: number) => {
+    if (!equipoId) return "No asignado"
+    const equipo = equipos.find((e) => e.id === equipoId)
+    return equipo ? equipo.nombre : "Equipo desconocido"
   }
 
   return (
@@ -80,8 +80,8 @@ export function TrabajadorDetails({ trabajador, escuadras }: TrabajadorDetailsPr
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Escuadra Asignada:</span>
-            <Badge variant="secondary">{getEscuadraNombre(trabajador.escuadraId)}</Badge>
+            <span className="text-sm text-gray-600">Equipo Asignado:</span>
+            <Badge variant="secondary">{getEquipoNombre(trabajador.equipoId)}</Badge>
           </div>
         </CardContent>
       </Card>

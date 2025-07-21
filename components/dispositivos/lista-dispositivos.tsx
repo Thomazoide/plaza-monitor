@@ -1,5 +1,9 @@
 "use client"
 
+// DEPRECATED: This component is no longer used. 
+// The new beacon management is handled in dispositivos-page-content.tsx
+// This file is kept for reference only.
+
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
@@ -12,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { MoreHorizontal, Edit3, Trash2, MapPin, Users, Truck, Link2, Unlink2 } from "lucide-react"
 import type { Dispositivo, GatewayDevice, BeaconDevice } from "@/types/dispositivos-types"
+import type { Beacon } from "@/types/beacon-types"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -87,20 +92,20 @@ export default function ListaDispositivos({
               </TableCell>
               <TableCell>
                 {dispositivo.tipo === "gateway" ? (
-                  (dispositivo as GatewayDevice).greenArea ? (
+                  dispositivo.greenArea ? (
                     <span className="flex items-center">
                       <MapPin className="w-4 h-4 mr-1 text-green-600" />
-                      {(dispositivo as GatewayDevice).greenArea?.name}
+                      {dispositivo.greenArea?.name}
                     </span>
                   ) : (
                     <span className="text-xs text-gray-500 italic">No asignado</span>
                   )
                 ) : dispositivo.tipo === "beacon" ? (
                   <div className="flex flex-col space-y-1">
-                    {(dispositivo as BeaconDevice).escuadra && (
+                    {(dispositivo as BeaconDevice).equipo && (
                       <span className="flex items-center">
                         <Users className="w-4 h-4 mr-1 text-blue-600" />
-                        {(dispositivo as BeaconDevice).escuadra?.nombre}
+                        {(dispositivo as BeaconDevice).equipo?.nombre}
                       </span>
                     )}
                     {(dispositivo as BeaconDevice).vehiculo && (
@@ -110,7 +115,7 @@ export default function ListaDispositivos({
                         {(dispositivo as BeaconDevice).vehiculo?.modelo})
                       </span>
                     )}
-                    {!(dispositivo as BeaconDevice).escuadra && !(dispositivo as BeaconDevice).vehiculo && (
+                    {!(dispositivo as BeaconDevice).equipo && !(dispositivo as BeaconDevice).vehiculo && (
                       <span className="text-xs text-gray-500 italic">No asignado</span>
                     )}
                   </div>
@@ -144,7 +149,7 @@ export default function ListaDispositivos({
                     )}
                     {dispositivo.tipo === "beacon" && (
                       <DropdownMenuItem onClick={() => onAssignBeacon(dispositivo as BeaconDevice)}>
-                        {(dispositivo as BeaconDevice).escuadraId || (dispositivo as BeaconDevice).vehiculoId ? (
+                        {(dispositivo as BeaconDevice).equipoId || (dispositivo as BeaconDevice).vehiculoId ? (
                           <Unlink2 className="mr-2 h-4 w-4" />
                         ) : (
                           <Link2 className="mr-2 h-4 w-4" />

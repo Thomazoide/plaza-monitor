@@ -2,15 +2,19 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Label as UILabel } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VehicleTrackingMap } from "@/components/tracking/vehicle-tracking-map"
-import { ArrowLeft, Edit, MapPin, Users, Car, Calendar, Phone, Mail, Shield } from "lucide-react"
-import { trabajadores } from "@/data/escuadras-data"
+import { EquipoTrackingMap } from "./equipo-tracking-map"
+import { ArrowLeft, Edit, MapPin, Users, Car, Calendar, Phone, Mail, Shield, Activity } from "lucide-react"
+import { getTrabajadores } from "@/data/escuadras-data"
 import type { Equipo } from "@/types/escuadras-types"
+import type { TrackingData, VehiclePosition } from "@/types/tracking-types"
+import { formatDateTime } from "@/utils/format"
 
 interface EquipoDetailsProps {
   equipo: Equipo
@@ -19,9 +23,85 @@ interface EquipoDetailsProps {
 
 export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
   const [activeTab, setActiveTab] = useState("general")
+  const [vehicleTracking, setVehicleTracking] = useState<TrackingData | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [trabajadoresEquipo, setTrabajadoresEquipo] = useState<any[]>([])
 
   // Obtener trabajadores asignados a este equipo
-  const trabajadoresEquipo = trabajadores.filter((t) => t.equipoId === equipo.id)
+  useEffect(() => {
+    const loadTrabajadores = async () => {
+      const trabajadores = getTrabajadores()
+      const trabajadoresDelEquipo = trabajadores.filter((t) => t.equipoId === equipo.id)
+      setTrabajadoresEquipo(trabajadoresDelEquipo)
+    }
+    loadTrabajadores()
+  }, [equipo.id])
+
+  // Configurar actualización de seguimiento cada 5 segundos
+  useEffect(() => {
+    // Solo configurar tracking si el equipo tiene vehículo
+    if (!equipo.vehiculo) return
+
+    const vehicleId = equipo.vehiculo.id
+    let updateInterval: NodeJS.Timeout | null = null
+    
+    // Función para obtener datos del vehículo desde el backend
+    const fetchVehicleData = async () => {
+      try {
+        // Obtener el endpoint del backend
+        const endpointResponse = await fetch('/api/get-backend-endpoint')
+        if (!endpointResponse.ok) {
+          throw new Error('Error al obtener el endpoint del backend')
+        }
+        const { endpoint } = await endpointResponse.json()
+
+        const response = await fetch(`${endpoint}/vehiculos/${vehicleId}`)
+        const result = await response.json()
+
+        if (!result.error && result.data) {
+          const vehicleData = result.data
+          const position: VehiclePosition = {
+            vehiculoId: vehicleData.id,
+            lat: vehicleData.latitud || -33.5059767,
+            lng: vehicleData.longitud || -70.7538867,
+            timestamp: new Date(vehicleData.timestamp || new Date()),
+            speed: vehicleData.velocidad || 0,
+            heading: vehicleData.heading || 0,
+            status: vehicleData.velocidad > 1 ? "moving" : "stopped",
+          }
+
+          setVehicleTracking(prevTracking => ({
+            currentPosition: position,
+            route: prevTracking ? [...prevTracking.route, position].slice(-100) : [position],
+            isOnline: true,
+            lastUpdate: new Date(),
+            batteryLevel: 85 // Mock data
+          }))
+          
+          setIsConnected(true)
+        } else {
+          setIsConnected(false)
+        }
+      } catch (error) {
+        console.error(`Error fetching vehicle ${vehicleId} data:`, error)
+        setIsConnected(false)
+      }
+    }
+
+    // Obtener datos iniciales
+    fetchVehicleData()
+
+    // Configurar intervalo para actualizar cada 5 segundos
+    updateInterval = setInterval(() => {
+      fetchVehicleData()
+    }, 5000)
+
+    return () => {
+      if (updateInterval) {
+        clearInterval(updateInterval)
+      }
+    }
+  }, [equipo.vehiculo])
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -36,7 +116,13 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
             <p className="text-gray-600">Detalles y gestión del equipo</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={equipo.estado === "activo" ? "default" : "secondary"}>{equipo.estado}</Badge>
+            <Badge variant={equipo.activa ? "default" : "secondary"}>{equipo.activa ? "Activo" : "Inactivo"}</Badge>
+            {equipo.vehiculo && (
+              <Badge variant={isConnected ? "default" : "destructive"} className="flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                {isConnected ? "Tracking conectado" : "Tracking desconectado"}
+              </Badge>
+            )}
             <Button>
               <Edit className="h-4 w-4 mr-2" />
               Editar
@@ -72,14 +158,19 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Estado</Label>
                   <div className="mt-1">
-                    <Badge variant={equipo.estado === "activo" ? "default" : "secondary"}>{equipo.estado}</Badge>
+                    <Badge variant={equipo.activa ? "default" : "secondary"}>{equipo.activa ? "Activo" : "Inactivo"}</Badge>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
                   <p className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    {equipo.fechaCreacion.toLocaleDateString()}
+                    {equipo.fechaCreacion?.toLocaleDateString('es-CL', { 
+                      timeZone: 'America/Santiago',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    }) || "No especificado"}
                   </p>
                 </div>
               </CardContent>
@@ -95,7 +186,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
               <CardContent>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Zona Asignada</Label>
-                  <p className="text-lg font-semibold">{equipo.zona?.nombre ?? "Sin zona asignada"}</p>
+                  <p className="text-lg font-semibold">Zona asignada</p>
                 </div>
               </CardContent>
             </Card>
@@ -118,7 +209,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Nombre Completo</Label>
                       <p className="font-semibold">
-                        {equipo.supervisor.nombre} {equipo.supervisor.apellido}
+                        {equipo.supervisor.fullName}
                       </p>
                     </div>
                     <div>
@@ -129,7 +220,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                       <Label className="text-sm font-medium text-gray-500">Teléfono</Label>
                       <p className="flex items-center gap-2">
                         <Phone className="h-4 w-4" />
-                        {equipo.supervisor.telefono}
+                        {equipo.supervisor.celular}
                       </p>
                     </div>
                     <div>
@@ -141,7 +232,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Fecha de Ingreso</Label>
-                      <p>{equipo.supervisor.fechaIngreso.toLocaleDateString()}</p>
+                      <p>No especificado</p>
                     </div>
                   </div>
                 ) : (
@@ -167,7 +258,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                           <p className="font-semibold">
                             {trabajador.nombre} {trabajador.apellido}
                           </p>
-                          <Badge variant="outline">{trabajador.estado}</Badge>
+                          <Badge variant="outline">{trabajador.activo ? "Activo" : "Inactivo"}</Badge>
                         </div>
                         <p className="text-sm text-gray-600">{trabajador.rut}</p>
                         <p className="text-sm text-gray-600">{trabajador.telefono}</p>
@@ -205,17 +296,21 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                       </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Año</Label>
-                      <p>{equipo.vehiculo.año}</p>
+                      <UILabel className="text-sm font-medium text-gray-500">Último reporte</UILabel>
+                      <p>{equipo.vehiculo.timestamp ? formatDateTime(equipo.vehiculo.timestamp) : "No disponible"}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Tipo</Label>
-                      <p className="capitalize">{equipo.vehiculo.tipo}</p>
+                      <UILabel className="text-sm font-medium text-gray-500">Ubicación</UILabel>
+                      <p>
+                        {equipo.vehiculo.latitud && equipo.vehiculo.longitud 
+                          ? `${equipo.vehiculo.latitud.toFixed(6)}, ${equipo.vehiculo.longitud.toFixed(6)}`
+                          : "No disponible"}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Estado</Label>
-                      <Badge variant={equipo.vehiculo.estado === "en_uso" ? "default" : "secondary"}>
-                        {equipo.vehiculo.estado}
+                      <UILabel className="text-sm font-medium text-gray-500">Estado</UILabel>
+                      <Badge variant={equipo.vehiculo.velocidad > 0 ? "default" : "secondary"}>
+                        {equipo.vehiculo.velocidad > 0 ? "En movimiento" : "Detenido"}
                       </Badge>
                     </div>
                   </div>
@@ -229,17 +324,13 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
 
         <TabsContent value="seguimiento" className="space-y-6">
           {equipo.vehiculo ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Seguimiento en Tiempo Real</CardTitle>
-                <CardDescription>Ubicación y estado actual del vehículo {equipo.vehiculo.patente}</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="h-[600px]">
-                  <VehicleTrackingMap />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="h-[600px]">
+              <EquipoTrackingMap 
+                equipo={equipo} 
+                vehicleTracking={vehicleTracking} 
+                isConnected={isConnected} 
+              />
+            </div>
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
