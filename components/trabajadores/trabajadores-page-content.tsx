@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Users, UserCheck, UserX, Briefcase, Search, Eye, Edit2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,18 +18,32 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { trabajadores as initialTrabajadores, escuadras } from "@/data/escuadras-data"
-import type { Trabajador } from "@/types/escuadras-types"
+import { trabajadores as initialTrabajadores, getEquipos, getTrabajadores } from "@/data/escuadras-data"
+import type { Trabajador, Equipo } from "@/types/escuadras-types"
 import { TrabajadorForm } from "./trabajador-form"
 import { TrabajadorDetails } from "./trabajador-details"
 
 export function TrabajadoresPageContent() {
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>(initialTrabajadores)
+  const [equipos, setEquipos] = useState<Equipo[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [trabajadorToEdit, setTrabajadorToEdit] = useState<Trabajador | null>(null)
   const [trabajadorToView, setTrabajadorToView] = useState<Trabajador | null>(null)
   const [trabajadorToDelete, setTrabajadorToDelete] = useState<Trabajador | null>(null)
+
+  // Cargar equipos del backend
+  useEffect(() => {
+    const loadEquipos = async () => {
+      try {
+        const equiposData = await getEquipos()
+        setEquipos(equiposData)
+      } catch (error) {
+        console.error('Error loading equipos:', error)
+      }
+    }
+    loadEquipos()
+  }, [])
 
   const handleFormSubmit = (trabajadorData: Trabajador) => {
     if (trabajadorToEdit) {
@@ -47,12 +61,8 @@ export function TrabajadoresPageContent() {
 
   const handleDeleteTrabajador = (trabajadorId: number) => {
     // En una app real, esto sería una llamada a API.
-    // Aquí simulamos la eliminación y desasignación de escuadra.
+    // Aquí simulamos la eliminación y desasignación de equipo.
     setTrabajadores(trabajadores.filter((t) => t.id !== trabajadorId))
-    // También actualizamos las escuadras para remover al trabajador
-    escuadras.forEach((escuadra) => {
-      escuadra.trabajadores = escuadra.trabajadores.filter((t) => t.id !== trabajadorId)
-    })
     setTrabajadorToDelete(null)
   }
 
@@ -64,13 +74,13 @@ export function TrabajadoresPageContent() {
   const totalTrabajadores = trabajadores.length
   const trabajadoresActivos = trabajadores.filter((t) => t.activo).length
   const trabajadoresInactivos = totalTrabajadores - trabajadoresActivos
-  const trabajadoresAsignados = trabajadores.filter((t) => t.escuadraId).length
+  const trabajadoresAsignados = trabajadores.filter((t) => t.equipoId).length
   const trabajadoresDisponibles = totalTrabajadores - trabajadoresAsignados
 
-  const getEscuadraNombre = (escuadraId?: number) => {
-    if (!escuadraId) return "No asignado"
-    const escuadra = escuadras.find((e) => e.id === escuadraId)
-    return escuadra ? escuadra.nombre : "Escuadra desconocida"
+  const getEquipoNombre = (equipoId?: number) => {
+    if (!equipoId) return "No asignado"
+    const equipo = equipos.find((e) => e.id === equipoId)
+    return equipo ? equipo.nombre : "Equipo desconocido"
   }
 
   return (
@@ -162,7 +172,7 @@ export function TrabajadoresPageContent() {
                     Estado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Escuadra
+                    Equipo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -188,7 +198,7 @@ export function TrabajadoresPageContent() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {getEscuadraNombre(trabajador.escuadraId)}
+                      {getEquipoNombre(trabajador.equipoId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <Button variant="outline" size="icon" onClick={() => setTrabajadorToView(trabajador)}>
@@ -216,8 +226,8 @@ export function TrabajadoresPageContent() {
                               <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Esta acción no se puede deshacer. Se eliminará permanentemente al trabajador "
-                                {trabajadorToDelete.nombre} {trabajadorToDelete.apellido}". Si está asignado a una
-                                escuadra, será desasignado.
+                                {trabajadorToDelete.nombre} {trabajadorToDelete.apellido}". Si está asignado a un
+                                equipo, será desasignado.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -277,7 +287,7 @@ export function TrabajadoresPageContent() {
           <DialogHeader>
             <DialogTitle>Detalles del Trabajador</DialogTitle>
           </DialogHeader>
-          {trabajadorToView && <TrabajadorDetails trabajador={trabajadorToView} escuadras={escuadras} />}
+          {trabajadorToView && <TrabajadorDetails trabajador={trabajadorToView} equipos={equipos} />}
         </DialogContent>
       </Dialog>
     </div>

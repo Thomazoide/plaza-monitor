@@ -24,19 +24,27 @@ export const fetchSupervisores = async (): Promise<Supervisor[]> => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    const data = await response.json()
+    const result = await response.json()
     
-    // Handle different response formats
-    if (Array.isArray(data)) {
-      return data
-    } else if (data && Array.isArray(data.data)) {
-      return data.data
-    } else if (data && Array.isArray(data.supervisores)) {
-      return data.supervisores
-    } else {
-      console.warn('Backend response for supervisores is not in expected format:', data)
+    // Handle standard response format: {message: string, data?: T, error: boolean}
+    if (result.error) {
+      console.error('Backend error for supervisores:', result.message)
       return []
     }
+    
+    if (result.data) {
+      // Si data es un array, devolverlo directamente
+      if (Array.isArray(result.data)) {
+        return result.data
+      }
+      // Si data es un objeto con una propiedad que contiene el array
+      if (result.data.supervisores && Array.isArray(result.data.supervisores)) {
+        return result.data.supervisores
+      }
+    }
+    
+    console.warn('Backend response for supervisores does not contain expected data:', result)
+    return []
   } catch (error) {
     console.error('Error fetching supervisores:', error)
     return []
@@ -51,19 +59,27 @@ export const fetchVehiculos = async (): Promise<Vehiculo[]> => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    const data = await response.json()
+    const result = await response.json()
     
-    // Handle different response formats
-    if (Array.isArray(data)) {
-      return data
-    } else if (data && Array.isArray(data.data)) {
-      return data.data
-    } else if (data && Array.isArray(data.vehiculos)) {
-      return data.vehiculos
-    } else {
-      console.warn('Backend response for vehiculos is not in expected format:', data)
+    // Handle standard response format: {message: string, data?: T, error: boolean}
+    if (result.error) {
+      console.error('Backend error for vehiculos:', result.message)
       return []
     }
+    
+    if (result.data) {
+      // Si data es un array, devolverlo directamente
+      if (Array.isArray(result.data)) {
+        return result.data
+      }
+      // Si data es un objeto con una propiedad que contiene el array
+      if (result.data.vehiculos && Array.isArray(result.data.vehiculos)) {
+        return result.data.vehiculos
+      }
+    }
+    
+    console.warn('Backend response for vehiculos does not contain expected data:', result)
+    return []
   } catch (error) {
     console.error('Error fetching vehiculos:', error)
     return []
@@ -78,19 +94,27 @@ export const fetchEquipos = async (): Promise<Equipo[]> => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    const data = await response.json()
+    const result = await response.json()
     
-    // Handle different response formats
-    if (Array.isArray(data)) {
-      return data
-    } else if (data && Array.isArray(data.data)) {
-      return data.data
-    } else if (data && Array.isArray(data.equipos)) {
-      return data.equipos
-    } else {
-      console.warn('Backend response for equipos is not in expected format:', data)
+    // Handle standard response format: {message: string, data?: T, error: boolean}
+    if (result.error) {
+      console.error('Backend error for equipos:', result.message)
       return []
     }
+    
+    if (result.data) {
+      // Si data es un array, devolverlo directamente
+      if (Array.isArray(result.data)) {
+        return result.data
+      }
+      // Si data es un objeto con una propiedad que contiene el array
+      if (result.data.equipos && Array.isArray(result.data.equipos)) {
+        return result.data.equipos
+      }
+    }
+    
+    console.warn('Backend response for equipos does not contain expected data:', result)
+    return []
   } catch (error) {
     console.error('Error fetching equipos:', error)
     return []

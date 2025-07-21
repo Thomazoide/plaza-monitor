@@ -13,7 +13,13 @@ import { getVehicleTrackingData } from "@/data/escuadras-data"
 const formatTime = (dateValue: Date | string | number): string => {
   try {
     const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
-    return date.toLocaleTimeString()
+    return date.toLocaleTimeString('es-CL', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
   } catch (error) {
     console.error('Error formatting time:', error)
     return 'N/A'
@@ -438,49 +444,6 @@ export function EquipoTrackingMap({ equipo, vehicleTracking, isConnected }: Equi
                 >
                   <Navigation className="h-3 w-3" />
                   {autoFollow ? "Siguiendo" : "Seguir"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (map && window.google) {
-                      console.log("Creando marcador de prueba...")
-                      const testMarker = new window.google.maps.Marker({
-                        position: { lat: -33.5059767, lng: -70.7538867 },
-                        map: map,
-                        title: "Marcador de prueba",
-                        visible: true,
-                      })
-                      console.log("Marcador de prueba creado:", testMarker)
-                      map.setCenter({ lat: -33.5059767, lng: -70.7538867 })
-                      map.setZoom(15)
-                    }
-                  }}
-                >
-                  Test Marker
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    console.log("=== ESTADO DEL MAPA ===")
-                    console.log("Map:", map)
-                    console.log("Marker:", marker)
-                    console.log("VehicleTracking:", currentVehicleTracking)
-                    console.log("Google Maps loaded:", !!window.google)
-                    if (map) {
-                      console.log("Map center:", map.getCenter())
-                      console.log("Map zoom:", map.getZoom())
-                      console.log("Map bounds:", map.getBounds())
-                    }
-                    if (marker) {
-                      console.log("Marker position:", marker.getPosition())
-                      console.log("Marker visible:", marker.getVisible())
-                      console.log("Marker map:", marker.getMap())
-                    }
-                  }}
-                >
-                  Debug
                 </Button>
               </div>
             </div>

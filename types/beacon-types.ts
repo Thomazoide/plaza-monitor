@@ -1,4 +1,16 @@
-import type { Trabajador, Supervisor, Vehiculo, Zona } from "./escuadras-types"
+import type { Trabajador, Supervisor, Vehiculo } from "./escuadras-types"
+
+export interface Zona {
+  id: number
+  name: string
+  coordinates: Array<{
+    lat: number
+    lng: number
+  }>
+  lastVisited: string | null
+  info: string
+  beaconID: number | null
+}
 
 export interface Beacon {
   id: number

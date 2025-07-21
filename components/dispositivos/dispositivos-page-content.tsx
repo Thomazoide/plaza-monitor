@@ -170,7 +170,7 @@ export default function DispositivosPageContent() {
       return { type: "Vehículo", name: beacon.vehiculo.patente || "N/A" }
     }
     if (beacon.zona) {
-      return { type: "Zona", name: beacon.zona.nombre || "N/A" }
+      return { type: "Zona", name: beacon.zona.name || "N/A" }
     }
     return { type: "Sin asignar", name: "-" }
   }
@@ -482,7 +482,7 @@ function BeaconDetails({ beacon }: BeaconDetailsProps) {
       return { type: "Vehículo", name: beacon.vehiculo.patente || "N/A", details: beacon.vehiculo }
     }
     if (beacon.zona) {
-      return { type: "Zona", name: beacon.zona.nombre || "N/A", details: beacon.zona }
+      return { type: "Zona", name: beacon.zona.name || "N/A", details: beacon.zona }
     }
     return { type: "Sin asignar", name: "-", details: null }
   }, [beacon])
@@ -520,6 +520,20 @@ function BeaconDetails({ beacon }: BeaconDetailsProps) {
                 <span className="text-sm text-gray-700">{assignment.name}</span>
               )}
             </div>
+            {beacon.zona && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 font-medium">Información de la Zona:</p>
+                <p className="text-sm text-gray-800 mt-1">{beacon.zona.info}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Coordenadas: {beacon.zona.coordinates.length} puntos definidos
+                </p>
+                {beacon.zona.lastVisited && (
+                  <p className="text-xs text-gray-500">
+                    Última visita: {new Date(beacon.zona.lastVisited).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

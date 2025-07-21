@@ -1,6 +1,18 @@
 import type { Dispositivo, GatewayDevice, BeaconDevice } from "@/types/dispositivos-types"
 import { greenAreas } from "./green-areas" // Para asignar a plazas
-import { escuadras, vehiculos } from "./escuadras-data" // Para asignar a escuadras y vehículos
+
+// Mock data para equipos y vehículos (datos de ejemplo)
+const mockEquipos = [
+  { id: 1, nombre: "Equipo Alpha" },
+  { id: 2, nombre: "Equipo Beta" },
+  { id: 3, nombre: "Equipo Gamma" }
+]
+
+const mockVehiculos = [
+  { id: 1, patente: "ABC-123", marca: "Toyota", modelo: "Hilux" },
+  { id: 2, patente: "DEF-456", marca: "Ford", modelo: "Ranger" },
+  { id: 3, patente: "GHI-789", marca: "Chevrolet", modelo: "S10" }
+]
 
 export const dispositivosData: Dispositivo[] = [
   {
@@ -45,8 +57,8 @@ export const dispositivosData: Dispositivo[] = [
     ultimaConexion: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutos atrás
     nivelBateria: 85,
     txPower: -12,
-    escuadraId: escuadras[0]?.id.toString(), // Asignado a la primera escuadra
-    escuadra: escuadras[0],
+    equipoId: mockEquipos[0]?.id.toString(), // Asignado al primer equipo
+    equipo: mockEquipos[0],
   } as BeaconDevice,
   {
     id: "BCN-002",
@@ -57,19 +69,19 @@ export const dispositivosData: Dispositivo[] = [
     ultimaConexion: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     nivelBateria: 60,
     txPower: -10,
-    vehiculoId: vehiculos[0]?.id.toString(), // Asignado al primer vehículo
-    vehiculo: vehiculos[0],
+    vehiculoId: mockVehiculos[0]?.id.toString(), // Asignado al primer vehículo
+    vehiculo: mockVehiculos[0],
   } as BeaconDevice,
   {
     id: "BCN-003",
-    nombre: "Beacon Herramientas Esc. Beta",
+    nombre: "Beacon Herramientas Eq. Beta",
     tipo: "beacon",
     estado: "mantenimiento",
     fechaAgregado: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     nivelBateria: 15,
     txPower: -20,
-    escuadraId: escuadras[1]?.id.toString(),
-    escuadra: escuadras[1],
+    equipoId: mockEquipos[1]?.id.toString(),
+    equipo: mockEquipos[1],
   } as BeaconDevice,
   {
     id: "BCN-004",
@@ -81,16 +93,16 @@ export const dispositivosData: Dispositivo[] = [
   } as BeaconDevice,
   {
     id: "BCN-005",
-    nombre: "Beacon Escuadra Alpha / Vehículo Ford Ranger",
+    nombre: "Beacon Equipo Alpha / Vehículo Ford Ranger",
     tipo: "beacon",
     estado: "activo",
     fechaAgregado: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     ultimaConexion: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
     nivelBateria: 77,
     txPower: -15,
-    escuadraId: escuadras[0]?.id.toString(),
-    escuadra: escuadras[0],
-    vehiculoId: vehiculos[1]?.id.toString(),
-    vehiculo: vehiculos[1],
+    equipoId: mockEquipos[0]?.id.toString(),
+    equipo: mockEquipos[0],
+    vehiculoId: mockVehiculos[1]?.id.toString(),
+    vehiculo: mockVehiculos[1],
   } as BeaconDevice,
 ]

@@ -13,7 +13,13 @@ import type { Equipo } from "@/types/escuadras-types"
 const formatTime = (dateValue: Date | string | number): string => {
   try {
     const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
-    return date.toLocaleTimeString()
+    return date.toLocaleTimeString('es-CL', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
   } catch (error) {
     console.error('Error formatting time:', error)
     return 'N/A'

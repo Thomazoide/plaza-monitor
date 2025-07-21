@@ -13,8 +13,8 @@ import { EquipoTrackingMap } from "./equipo-tracking-map"
 import { ArrowLeft, Edit, MapPin, Users, Car, Calendar, Phone, Mail, Shield, Activity } from "lucide-react"
 import { getTrabajadores } from "@/data/escuadras-data"
 import type { Equipo } from "@/types/escuadras-types"
-import type { TrackingData, VehiclePosition, SocketPositionResponse } from "@/types/tracking-types"
-import { getSocket } from "@/lib/socket"
+import type { TrackingData, VehiclePosition } from "@/types/tracking-types"
+import { formatDateTime } from "@/utils/format"
 
 interface EquipoDetailsProps {
   equipo: Equipo
@@ -37,38 +37,15 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
     loadTrabajadores()
   }, [equipo.id])
 
-  // Función de prueba para verificar el endpoint
-  const testConnection = async () => {
-    if (!equipo.vehiculo) return
-    
-    console.log("Probando conexión con el endpoint...")
-    try {
-      // Obtener el endpoint del backend
-      const endpointResponse = await fetch('/api/get-backend-endpoint')
-      if (!endpointResponse.ok) {
-        throw new Error('Error al obtener el endpoint del backend')
-      }
-      const { endpoint } = await endpointResponse.json()
-
-      // Prueba con el endpoint REST
-      const response = await fetch(`${endpoint}/vehiculos/${equipo.vehiculo.id}`)
-      const data = await response.json()
-      console.log("Respuesta del endpoint:", data)
-    } catch (error) {
-      console.error("Error en la prueba de conexión:", error)
-    }
-  }
-
-  // Configurar seguimiento en tiempo real para el vehículo del equipo
+  // Configurar actualización de seguimiento cada 5 segundos
   useEffect(() => {
     // Solo configurar tracking si el equipo tiene vehículo
     if (!equipo.vehiculo) return
 
     const vehicleId = equipo.vehiculo.id
-    let socket: any = null
-    let positionInterval: NodeJS.Timeout | null = null
+    let updateInterval: NodeJS.Timeout | null = null
     
-    // Función para obtener datos iniciales del vehículo
+    // Función para obtener datos del vehículo desde el backend
     const fetchVehicleData = async () => {
       try {
         // Obtener el endpoint del backend
@@ -79,136 +56,52 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
         const { endpoint } = await endpointResponse.json()
 
         const response = await fetch(`${endpoint}/vehiculos/${vehicleId}`)
-        const data = await response.json()
+        const result = await response.json()
 
-        if (!data.error && data.data) {
-          const { data: vehicleData } = data
-          const initialPosition: VehiclePosition = {
+        if (!result.error && result.data) {
+          const vehicleData = result.data
+          const position: VehiclePosition = {
             vehiculoId: vehicleData.id,
-            lat: vehicleData.latitud,
-            lng: vehicleData.longitud,
-            timestamp: new Date(vehicleData.timestamp),
-            speed: vehicleData.velocidad,
-            heading: vehicleData.heading,
+            lat: vehicleData.latitud || -33.5059767,
+            lng: vehicleData.longitud || -70.7538867,
+            timestamp: new Date(vehicleData.timestamp || new Date()),
+            speed: vehicleData.velocidad || 0,
+            heading: vehicleData.heading || 0,
             status: vehicleData.velocidad > 1 ? "moving" : "stopped",
           }
 
-          setVehicleTracking({
-            currentPosition: initialPosition,
-            route: [initialPosition],
+          setVehicleTracking(prevTracking => ({
+            currentPosition: position,
+            route: prevTracking ? [...prevTracking.route, position].slice(-100) : [position],
             isOnline: true,
             lastUpdate: new Date(),
-          })
+            batteryLevel: 85 // Mock data
+          }))
+          
+          setIsConnected(true)
+        } else {
+          setIsConnected(false)
         }
       } catch (error) {
         console.error(`Error fetching vehicle ${vehicleId} data:`, error)
+        setIsConnected(false)
       }
     }
 
-    const setupSocket = async () => {
-      try {
-        socket = await getSocket()
+    // Obtener datos iniciales
+    fetchVehicleData()
 
-        const connectSocket = () => {
-          if (socket && socket.disconnected) {
-            socket.connect()
-          }
-        }
+    // Configurar intervalo para actualizar cada 5 segundos
+    updateInterval = setInterval(() => {
+      fetchVehicleData()
+    }, 5000)
 
-        const handleConnect = () => {
-          console.log("Socket conectado para equipo:", equipo.nombre)
-          console.log("Socket ID:", socket?.id)
-          console.log("Socket connected:", socket?.connected)
-          setIsConnected(true)
-          fetchVehicleData()
-        }
-
-        const handleDisconnect = (reason: string) => {
-          console.log("Socket desconectado:", reason)
-          setIsConnected(false)
-        }
-
-        const handleConnectError = (error: any) => {
-          console.error("Error de conexión del socket:", error)
-          setIsConnected(false)
-        }
-
-        const handlePositionUpdate = (data: SocketPositionResponse) => {
-          console.log("Posición recibida para equipo:", equipo.nombre, data)
-          console.log("Tipo de data:", typeof data)
-          console.log("Data es null/undefined:", data === null || data === undefined)
-
-          if (data && data.vehiculoId === vehicleId) {
-            setVehicleTracking(prevTracking => {
-              const newPosition: VehiclePosition = {
-                vehiculoId: data.vehiculoId,
-                lat: data.lat,
-                lng: data.lng,
-                timestamp: new Date(data.timestamp), // Asegurar que sea Date
-                speed: data.speed,
-                heading: data.heading,
-                status: data.speed > 1 ? "moving" : "stopped",
-              }
-
-              const updatedTracking: TrackingData = {
-                currentPosition: newPosition,
-                route: prevTracking ? [...prevTracking.route, newPosition].slice(-100) : [newPosition],
-                isOnline: true,
-                lastUpdate: new Date(),
-              }
-
-              return updatedTracking
-            })
-          } else {
-            console.log("Datos inválidos o vehicleId no coincide:", data?.vehiculoId, "esperado:", vehicleId)
-          }
-        }
-
-        // Configurar eventos del socket
-        socket.on("connect", handleConnect)
-        socket.on("disconnect", handleDisconnect)
-        socket.on("connect_error", handleConnectError)
-        socket.on("posicion-actualizada", handlePositionUpdate) // Solo este evento según el servidor
-
-        // Conectar el socket
-        connectSocket()
-
-        // Intervalo para solicitar posición cada 5 segundos
-        positionInterval = setInterval(() => {
-          if (socket?.connected) {
-            console.log(`Solicitando posición del vehículo ${vehicleId} para equipo ${equipo.nombre}`)
-            console.log("Socket status:", socket.connected ? "conectado" : "desconectado")
-            socket.emit("obtener-posicion", { id: vehicleId })
-          } else {
-            console.log("Socket desconectado, intentando reconectar...")
-            connectSocket()
-          }
-        }, 5000)
-
-        return () => {
-          if (positionInterval) {
-            clearInterval(positionInterval)
-          }
-          if (socket) {
-            socket.off("connect", handleConnect)
-            socket.off("disconnect", handleDisconnect)
-            socket.off("connect_error", handleConnectError)
-            socket.off("posicion-actualizada", handlePositionUpdate) // Solo este evento
-            if (socket.connected) {
-              socket.disconnect()
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error setting up socket:', error)
-      }
-    }
-
-    const cleanup = setupSocket()
     return () => {
-      cleanup?.then((cleanupFn) => cleanupFn?.())
+      if (updateInterval) {
+        clearInterval(updateInterval)
+      }
     }
-  }, [equipo.vehiculo, equipo.nombre])
+  }, [equipo.vehiculo])
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -234,11 +127,6 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
               <Edit className="h-4 w-4 mr-2" />
               Editar
             </Button>
-            {equipo.vehiculo && (
-              <Button variant="outline" onClick={testConnection}>
-                Test Conexión
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -277,7 +165,12 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                   <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
                   <p className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    {equipo.fechaCreacion?.toLocaleDateString() || "No especificado"}
+                    {equipo.fechaCreacion?.toLocaleDateString('es-CL', { 
+                      timeZone: 'America/Santiago',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    }) || "No especificado"}
                   </p>
                 </div>
               </CardContent>
@@ -404,7 +297,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
                     </div>
                     <div>
                       <UILabel className="text-sm font-medium text-gray-500">Último reporte</UILabel>
-                      <p>{equipo.vehiculo.timestamp?.toLocaleString() || "No disponible"}</p>
+                      <p>{equipo.vehiculo.timestamp ? formatDateTime(equipo.vehiculo.timestamp) : "No disponible"}</p>
                     </div>
                     <div>
                       <UILabel className="text-sm font-medium text-gray-500">Ubicación</UILabel>

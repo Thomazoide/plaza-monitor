@@ -27,7 +27,7 @@ export const getSocket = async (): Promise<Socket> => {
   } catch (error) {
     console.error('Error getting socket:', error)
     // Fallback al endpoint por defecto
-    socketInstance = io("https://jtfb87sn-8888.brs.devtunnels.ms/position", {
+    socketInstance = io("localhost:8888/position", {
       autoConnect: false,
       transports: ["websocket", "polling"],
       timeout: 20000,
