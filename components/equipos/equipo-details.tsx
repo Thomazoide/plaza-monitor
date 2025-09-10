@@ -1,19 +1,16 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label as UILabel } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { VehicleTrackingMap } from "@/components/tracking/vehicle-tracking-map"
-import { EquipoTrackingMap } from "./equipo-tracking-map"
-import { ArrowLeft, Edit, MapPin, Users, Car, Calendar, Phone, Mail, Shield, Activity } from "lucide-react"
+import { EquipoTrackingMap, type EquipoTrackingMapRef } from "./equipo-tracking-map"
+import { ArrowLeft, Edit, MapPin, Users, Car, Calendar, Phone, Mail, Shield } from "lucide-react"
 import { getTrabajadores } from "@/data/escuadras-data"
 import type { Equipo } from "@/types/escuadras-types"
-import type { TrackingData, VehiclePosition } from "@/types/tracking-types"
+// tracking UI simplificado, la lógica de tiempo real vive en EquipoTrackingMap
 import { formatDateTime } from "@/utils/format"
 
 interface EquipoDetailsProps {
@@ -23,9 +20,10 @@ interface EquipoDetailsProps {
 
 export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
   const [activeTab, setActiveTab] = useState("general")
-  const [vehicleTracking, setVehicleTracking] = useState<TrackingData | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
   const [trabajadoresEquipo, setTrabajadoresEquipo] = useState<any[]>([])
+  const [lastTimestamp, setLastTimestamp] = useState<Date | null>(null)
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const mapRef = useRef<EquipoTrackingMapRef | null>(null)
 
   // Obtener trabajadores asignados a este equipo
   useEffect(() => {
@@ -37,71 +35,7 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
     loadTrabajadores()
   }, [equipo.id])
 
-  // Configurar actualización de seguimiento cada 5 segundos
-  useEffect(() => {
-    // Solo configurar tracking si el equipo tiene vehículo
-    if (!equipo.vehiculo) return
-
-    const vehicleId = equipo.vehiculo.id
-    let updateInterval: NodeJS.Timeout | null = null
-    
-    // Función para obtener datos del vehículo desde el backend
-    const fetchVehicleData = async () => {
-      try {
-        // Obtener el endpoint del backend
-        const endpointResponse = await fetch('/api/get-backend-endpoint')
-        if (!endpointResponse.ok) {
-          throw new Error('Error al obtener el endpoint del backend')
-        }
-        const { endpoint } = await endpointResponse.json()
-
-        const response = await fetch(`${endpoint}/vehiculos/${vehicleId}`)
-        const result = await response.json()
-
-        if (!result.error && result.data) {
-          const vehicleData = result.data
-          const position: VehiclePosition = {
-            vehiculoId: vehicleData.id,
-            lat: vehicleData.latitud || -33.5059767,
-            lng: vehicleData.longitud || -70.7538867,
-            timestamp: new Date(vehicleData.timestamp || new Date()),
-            speed: vehicleData.velocidad || 0,
-            heading: vehicleData.heading || 0,
-            status: vehicleData.velocidad > 1 ? "moving" : "stopped",
-          }
-
-          setVehicleTracking(prevTracking => ({
-            currentPosition: position,
-            route: prevTracking ? [...prevTracking.route, position].slice(-100) : [position],
-            isOnline: true,
-            lastUpdate: new Date(),
-            batteryLevel: 85 // Mock data
-          }))
-          
-          setIsConnected(true)
-        } else {
-          setIsConnected(false)
-        }
-      } catch (error) {
-        console.error(`Error fetching vehicle ${vehicleId} data:`, error)
-        setIsConnected(false)
-      }
-    }
-
-    // Obtener datos iniciales
-    fetchVehicleData()
-
-    // Configurar intervalo para actualizar cada 5 segundos
-    updateInterval = setInterval(() => {
-      fetchVehicleData()
-    }, 5000)
-
-    return () => {
-      if (updateInterval) {
-        clearInterval(updateInterval)
-      }
-    }
-  }, [equipo.vehiculo])
+  // Tracking en tiempo real manejado dentro del componente EquipoTrackingMap (cada 5s)
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -114,19 +48,6 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
           <div>
             <h1 className="text-2xl font-bold">{equipo.nombre}</h1>
             <p className="text-gray-600">Detalles y gestión del equipo</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={equipo.activa ? "default" : "secondary"}>{equipo.activa ? "Activo" : "Inactivo"}</Badge>
-            {equipo.vehiculo && (
-              <Badge variant={isConnected ? "default" : "destructive"} className="flex items-center gap-1">
-                <Activity className="h-3 w-3" />
-                {isConnected ? "Tracking conectado" : "Tracking desconectado"}
-              </Badge>
-            )}
-            <Button>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
           </div>
         </div>
       </div>
@@ -324,12 +245,36 @@ export function EquipoDetails({ equipo, onBack }: EquipoDetailsProps) {
 
         <TabsContent value="seguimiento" className="space-y-6">
           {equipo.vehiculo ? (
-            <div className="h-[600px]">
-              <EquipoTrackingMap 
-                equipo={equipo} 
-                vehicleTracking={vehicleTracking} 
-                isConnected={isConnected} 
-              />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[600px]">
+              <div className="md:col-span-3 h-full">
+                <EquipoTrackingMap
+                  ref={mapRef}
+                  equipo={equipo}
+                  onTrackingUpdate={({ lastUpdate, timestamp }) => {
+                    setLastUpdate(lastUpdate)
+                    setLastTimestamp(timestamp)
+                  }}
+                />
+              </div>
+              <div className="md:col-span-1 h-full">
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle>Estado de Seguimiento</CardTitle>
+                    <CardDescription>Controles y últimos datos</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <UILabel className="text-sm font-medium text-gray-500">Última actualización</UILabel>
+                      <p className="text-sm">{lastUpdate ? formatDateTime(lastUpdate) : "—"}</p>
+                    </div>
+                    <div>
+                      <UILabel className="text-sm font-medium text-gray-500">Timestamp del vehículo</UILabel>
+                      <p className="text-sm">{lastTimestamp ? formatDateTime(lastTimestamp) : "—"}</p>
+                    </div>
+                    <Button onClick={() => mapRef.current?.center()} className="w-full">Centrar</Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           ) : (
             <Card>

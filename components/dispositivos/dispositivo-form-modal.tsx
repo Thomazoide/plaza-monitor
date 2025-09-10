@@ -121,8 +121,8 @@ export default function DispositivoFormModal({ isOpen, onClose, onSubmit, initia
         tipo: "gateway",
         ipAddress: data.ipAddress || undefined,
         versionFirmware: data.versionFirmware || undefined,
-        zonaId: initialData?.tipo === "gateway" ? (initialData as GatewayDevice).zonaId : undefined,
-        zona: initialData?.tipo === "gateway" ? (initialData as GatewayDevice).zona : undefined,
+  greenAreaId: initialData?.tipo === "gateway" ? (initialData as GatewayDevice).greenAreaId : undefined,
+  greenArea: initialData?.tipo === "gateway" ? (initialData as GatewayDevice).greenArea : undefined,
       } as GatewayDevice
     } else {
       dispositivoFinal = {
@@ -130,8 +130,8 @@ export default function DispositivoFormModal({ isOpen, onClose, onSubmit, initia
         tipo: "beacon",
         nivelBateria: data.nivelBateria ?? undefined,
         txPower: data.txPower ?? undefined,
-        escuadraId: initialData?.tipo === "beacon" ? (initialData as BeaconDevice).escuadraId : undefined,
-        escuadra: initialData?.tipo === "beacon" ? (initialData as BeaconDevice).escuadra : undefined,
+  equipoId: initialData?.tipo === "beacon" ? (initialData as BeaconDevice).equipoId : undefined,
+  equipo: initialData?.tipo === "beacon" ? (initialData as BeaconDevice).equipo : undefined,
       } as BeaconDevice
     }
     onSubmit(dispositivoFinal)

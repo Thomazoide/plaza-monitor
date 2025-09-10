@@ -5,11 +5,9 @@ import { Loader } from "@googlemaps/js-api-loader"
 import type { Zona } from "@/types/escuadras-types"
 import { Button } from "@/components/ui/button"
 import { Shapes } from "lucide-react"
-import type * as google from "google-maps"
-
 declare global {
   interface Window {
-    google: typeof globalThis.google
+    google: any
   }
 }
 
@@ -26,9 +24,9 @@ export function MapaZonas({ zonas, onPolygonComplete, selectedZonaId, center, zo
   const [mapError, setMapError] = useState<string | null>(null)
   const [isMapReady, setIsMapReady] = useState(false)
   const [apiKey, setApiKey] = useState<string>("")
-  const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null)
-  const mapInstanceRef = useRef<google.maps.Map | null>(null)
-  const polygonsRef = useRef<google.maps.Polygon[]>([])
+  const drawingManagerRef = useRef<any>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const polygonsRef = useRef<any[]>([])
 
   useEffect(() => {
     const fetchApiKey = async () => {
@@ -72,7 +70,7 @@ export function MapaZonas({ zonas, onPolygonComplete, selectedZonaId, center, zo
         })
         mapInstanceRef.current = mapInstance
 
-        const drawingManager = new google.maps.drawing.DrawingManager({
+  const drawingManager = new google.maps.drawing.DrawingManager({
           drawingMode: null, // No activo por defecto
           drawingControl: true,
           drawingControlOptions: {
@@ -92,7 +90,7 @@ export function MapaZonas({ zonas, onPolygonComplete, selectedZonaId, center, zo
         drawingManager.setMap(mapInstance)
         drawingManagerRef.current = drawingManager
 
-        google.maps.event.addListener(drawingManager, "polygoncomplete", (polygon: google.maps.Polygon) => {
+  google.maps.event.addListener(drawingManager, "polygoncomplete", (polygon: any) => {
           const path = polygon.getPath()
           const coords: { lat: number; lng: number }[] = []
           for (let i = 0; i < path.getLength(); i++) {

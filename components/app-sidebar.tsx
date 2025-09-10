@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { Users, UserCheck, Car, Smartphone, MapPin, Home, ChevronRight, Shield } from "lucide-react"
+import { Users, UserCheck, Car, Smartphone, MapPin, Home, ChevronRight, Shield, FileText } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import {
@@ -58,6 +58,11 @@ const resourceItems = [
     title: "Dispositivos",
     url: "/dispositivos",
     icon: Smartphone,
+  },
+  {
+    title: "Registros",
+    url: "/registros",
+    icon: FileText,
   },
 ]
 

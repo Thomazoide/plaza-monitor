@@ -6,7 +6,7 @@ import type { GreenArea } from "@/types/map-types"
 
 declare global {
   interface Window {
-    google: typeof globalThis.google
+    google: any
   }
 }
 

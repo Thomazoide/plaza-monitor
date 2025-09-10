@@ -1,13 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { MapPin, Navigation, Clock, Gauge, Activity } from "lucide-react"
+import React, { forwardRef, useEffect, useImperativeHandle, useState } from "react"
 import type { Equipo } from "@/types/escuadras-types"
 import type { TrackingData } from "@/types/tracking-types"
-import { getVehicleTrackingData } from "@/data/escuadras-data"
 
 // Helper function to safely format date
 const formatTime = (dateValue: Date | string | number): string => {
@@ -35,16 +30,19 @@ declare global {
 
 interface EquipoTrackingMapProps {
   equipo: Equipo
-  vehicleTracking: TrackingData | null
-  isConnected: boolean
+  onTrackingUpdate?: (info: { lastUpdate: Date; timestamp: Date; lat: number; lng: number }) => void
 }
 
-export function EquipoTrackingMap({ equipo, vehicleTracking, isConnected }: EquipoTrackingMapProps) {
+export interface EquipoTrackingMapRef {
+  center: () => void
+}
+
+export const EquipoTrackingMap = forwardRef<EquipoTrackingMapRef, EquipoTrackingMapProps>(({ equipo, onTrackingUpdate }, ref) => {
   const [map, setMap] = useState<any>(null)
   const [marker, setMarker] = useState<any>(null)
   const [apiKey, setApiKey] = useState<string>("")
-  const [autoFollow, setAutoFollow] = useState<boolean>(true)
-  const [vehicleTrackingData, setVehicleTrackingData] = useState<TrackingData | null>(vehicleTracking)
+  const [autoFollow] = useState<boolean>(true)
+  const [vehicleTrackingData, setVehicleTrackingData] = useState<TrackingData | null>(null)
 
   // Obtener la clave de API
   useEffect(() => {
@@ -90,33 +88,65 @@ export function EquipoTrackingMap({ equipo, vehicleTracking, isConnected }: Equi
     }
   }, [apiKey]) // Solo apiKey en las dependencias, NO vehicleTracking
 
-  // Obtener datos de tracking del backend
+  // Obtener datos de tracking del backend (cada 5s)
   useEffect(() => {
-    const fetchTrackingData = async () => {
-      if (!equipo.vehiculo) return
+    if (!equipo.vehiculo) return
+    let interval: NodeJS.Timeout | null = null
 
+    const fetchTrackingData = async () => {
       try {
-        const trackingData = await getVehicleTrackingData(equipo.vehiculo.id)
-        if (trackingData) {
-          setVehicleTrackingData(trackingData)
+        const endpointResp = await fetch("/api/get-backend-endpoint")
+        if (!endpointResp.ok) throw new Error("No se pudo obtener BACKEND_ENDPOINT")
+        const { endpoint } = await endpointResp.json()
+
+        const res = await fetch(`${endpoint}/vehiculos/${equipo.vehiculo!.id}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        if (json?.error || !json?.data) return
+        const v = json.data
+        const position: TrackingData["currentPosition"] = {
+          vehiculoId: v.id,
+          lat: v.latitud ?? -33.5059767,
+          lng: v.longitud ?? -70.7538867,
+          speed: v.velocidad ?? 0,
+          heading: v.heading ?? 0,
+          timestamp: v.timestamp ? new Date(v.timestamp) : new Date(),
+          status: ((v.velocidad ?? 0) > 1 ? "moving" : "stopped"),
         }
-      } catch (error) {
-        console.error("Error fetching tracking data:", error)
+        let nextState: TrackingData
+        setVehicleTrackingData((prev) => {
+          const built: TrackingData = {
+            currentPosition: position,
+            route: prev ? [...prev.route, position].slice(-100) : [position],
+            isOnline: true,
+            lastUpdate: new Date(),
+            batteryLevel: 85,
+          }
+          try {
+            onTrackingUpdate?.({
+              lastUpdate: built.lastUpdate,
+              timestamp: built.currentPosition.timestamp,
+              lat: built.currentPosition.lat,
+              lng: built.currentPosition.lng,
+            })
+          } catch {}
+          return built
+        })
+      } catch (e) {
+        console.error("Error tracking fetch:", e)
       }
     }
 
     fetchTrackingData()
-    // Actualizar cada 10 segundos
-    const interval = setInterval(fetchTrackingData, 10000)
-
-    return () => clearInterval(interval)
+    interval = setInterval(fetchTrackingData, 5000)
+    return () => { if (interval) clearInterval(interval) }
   }, [equipo.vehiculo])
 
   // Usar los datos del vehículo directamente si están disponibles
   useEffect(() => {
     if (!equipo.vehiculo || !equipo.vehiculo.latitud || !equipo.vehiculo.longitud) return
 
-    const trackingData = {
+    const trackingData: TrackingData = {
       currentPosition: {
         vehiculoId: equipo.vehiculo.id,
         lat: equipo.vehiculo.latitud,
@@ -133,10 +163,18 @@ export function EquipoTrackingMap({ equipo, vehicleTracking, isConnected }: Equi
     }
 
     setVehicleTrackingData(trackingData)
+    try {
+      onTrackingUpdate?.({
+        lastUpdate: trackingData.lastUpdate,
+        timestamp: trackingData.currentPosition.timestamp,
+        lat: trackingData.currentPosition.lat,
+        lng: trackingData.currentPosition.lng,
+      })
+    } catch {}
   }, [equipo.vehiculo])
 
   // Usar vehicleTrackingData si está disponible, sino usar la prop vehicleTracking
-  const currentVehicleTracking = vehicleTrackingData || vehicleTracking
+  const currentVehicleTracking = vehicleTrackingData
 
   // Centrar el mapa cuando se obtienen los primeros datos de tracking (solo una vez)
   useEffect(() => {
@@ -339,8 +377,8 @@ export function EquipoTrackingMap({ equipo, vehicleTracking, isConnected }: Equi
       }, 1000)
     }
 
-    // Seguimiento automático solo si está habilitado y el vehículo se está moviendo
-    if (autoFollow && position.status === "moving") {
+  // Seguimiento automático: mantener el mapa centrado en todo momento si autoFollow está activo
+  if (autoFollow) {
       console.log("Auto-following vehicle")
       // Usar panTo en lugar de setCenter para un movimiento más suave
       map.panTo({ lat: position.lat, lng: position.lng })
@@ -401,144 +439,19 @@ export function EquipoTrackingMap({ equipo, vehicleTracking, isConnected }: Equi
     }
   }, [])
 
+  const centerMap = () => {
+    if (map && currentVehicleTracking) {
+      map.panTo({
+        lat: currentVehicleTracking.currentPosition.lat,
+        lng: currentVehicleTracking.currentPosition.lng,
+      })
+      map.setZoom(16)
+    }
+  }
+
+  useImperativeHandle(ref, () => ({ center: centerMap }), [map, currentVehicleTracking])
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
-      <div className="lg:col-span-2">
-        <Card className="h-full">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Seguimiento - {equipo.nombre}</CardTitle>
-                <CardDescription>
-                  {equipo.vehiculo ? `Vehículo ${equipo.vehiculo.patente}` : "Sin vehículo asignado"}
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={isConnected ? "default" : "destructive"} className="flex items-center gap-1">
-                  <Activity className="h-3 w-3" />
-                  {isConnected ? "Conectado" : "Desconectado"}
-                </Badge>
-                {currentVehicleTracking && (
-                  <Badge variant="destructive" className="flex items-center gap-1 animate-pulse">
-                    <Activity className="h-3 w-3" />
-                    LIVE
-                  </Badge>
-                )}
-                <Button
-                  variant={autoFollow ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    const newAutoFollow = !autoFollow
-                    setAutoFollow(newAutoFollow)
-                    console.log("Auto-follow cambiado a:", newAutoFollow)
-                    
-                    // Si se activa el seguimiento y hay datos, centrar inmediatamente
-                    if (newAutoFollow && currentVehicleTracking && map) {
-                      map.panTo({ 
-                        lat: currentVehicleTracking.currentPosition.lat, 
-                        lng: currentVehicleTracking.currentPosition.lng 
-                      })
-                    }
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <Navigation className="h-3 w-3" />
-                  {autoFollow ? "Siguiendo" : "Seguir"}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div id="equipo-tracking-map" className="w-full h-[500px] rounded-b-lg" />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-4">
-        {currentVehicleTracking && equipo.vehiculo && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Información del Vehículo</CardTitle>
-              <CardDescription>{equipo.nombre}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Ubicación</p>
-                    <p className="text-xs text-muted-foreground">
-                      {currentVehicleTracking.currentPosition.lat.toFixed(6)},{" "}
-                      {currentVehicleTracking.currentPosition.lng.toFixed(6)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Gauge className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Velocidad</p>
-                    <p className="text-xs text-muted-foreground">
-                      {currentVehicleTracking.currentPosition.speed.toFixed(1)} km/h
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Navigation className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Dirección</p>
-                    <p className="text-xs text-muted-foreground">{currentVehicleTracking.currentPosition.heading}°</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Última actualización</p>
-                    <p className="text-xs text-muted-foreground">{formatTime(currentVehicleTracking.lastUpdate)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t">
-                <p className="text-sm font-medium mb-2">Estado del vehículo</p>
-                <div className="flex items-center gap-2">
-                  <Badge variant={currentVehicleTracking.currentPosition.status === "moving" ? "default" : "secondary"}>
-                    {currentVehicleTracking.currentPosition.status === "moving" ? "En movimiento" : "Detenido"}
-                  </Badge>
-                  <Badge variant="destructive">
-                    <Activity className="h-3 w-3 mr-1" />
-                    Tiempo real
-                  </Badge>
-                </div>
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={() => {
-                  if (map && currentVehicleTracking) {
-                    map.setCenter({
-                      lat: currentVehicleTracking.currentPosition.lat,
-                      lng: currentVehicleTracking.currentPosition.lng,
-                    })
-                    map.setZoom(16)
-                  }
-                }}
-              >
-                Centrar en mapa
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {!currentVehicleTracking && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Esperando datos...</h3>
-              <p className="text-gray-500">Conectando al seguimiento en tiempo real</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
+    <div id="equipo-tracking-map" className="w-full h-full rounded-lg" />
   )
-}
+})

@@ -15,8 +15,8 @@ import { Label } from "@/components/ui/label"
 import type { AsignarBeaconProps } from "@/types/dispositivos-types"
 import * as React from "react"
 
-export default function AsignarBeaconModal({ beacon, escuadras, vehiculos, onAssign, onCancel }: AsignarBeaconProps) {
-  const [selectedEscuadraId, setSelectedEscuadraId] = React.useState<string | null>(beacon.escuadraId || null)
+export default function AsignarBeaconModal({ beacon, equipos, vehiculos, onAssign, onCancel }: AsignarBeaconProps) {
+  const [selectedEscuadraId, setSelectedEscuadraId] = React.useState<string | null>(beacon.equipoId?.toString() || null)
   const [selectedVehiculoId, setSelectedVehiculoId] = React.useState<string | null>(beacon.vehiculoId || null)
 
   const handleSubmit = () => {
@@ -47,9 +47,9 @@ export default function AsignarBeaconModal({ beacon, escuadras, vehiculos, onAss
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ninguna">-- Ninguna --</SelectItem>
-                {escuadras.map((escuadra) => (
-                  <SelectItem key={escuadra.id} value={escuadra.id.toString()}>
-                    {escuadra.nombre}
+                {equipos.map((equipo) => (
+                  <SelectItem key={equipo.id} value={equipo.id.toString()}>
+                    {equipo.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>

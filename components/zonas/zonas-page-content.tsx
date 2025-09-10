@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { zonas as initialZonasData } from "@/data/escuadras-data"
+import { zonas as initialZonasData } from "@/data/zonas-data"
 import type { Zona } from "@/types/escuadras-types"
 import { MapaZonas } from "./mapa-zonas"
 import { ZonaForm } from "./zona-form"

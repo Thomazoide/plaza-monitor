@@ -354,7 +354,7 @@ export default function Dashboard() {
             <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
               <h3 className="text-lg font-semibold mb-3 text-gray-700">Distribución por Tipo</h3>
               <div className="h-64 flex flex-col justify-center">
-                {stats.areasByType.map((type, index) => (
+                {stats.areasByType.map((type: any, index: number) => (
                   <div key={index} className="mb-4">
                     <div className="flex justify-between mb-1">
                       <span className="text-sm font-medium">{type.name}</span>
@@ -380,7 +380,7 @@ export default function Dashboard() {
             <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
               <h3 className="text-lg font-semibold mb-3 text-gray-700">Distribución por Tamaño</h3>
               <div className="h-64 flex flex-col justify-center">
-                {stats.areasBySize.map((size, index) => (
+                {stats.areasBySize.map((size: any, index: number) => (
                   <div key={index} className="mb-4">
                     <div className="flex justify-between mb-1">
                       <span className="text-sm font-medium">{size.name}</span>

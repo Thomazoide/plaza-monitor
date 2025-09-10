@@ -9,10 +9,11 @@ import type { GreenArea } from "@/types/map-types"
 interface AreaVerdeDetailsProps {
   area: GreenArea
   onClose: () => void
-  onEdit: () => void
+  onEdit?: () => void
+  onUpdateLastVisited?: () => void
 }
 
-export function AreaVerdeDetails({ area, onClose, onEdit }: AreaVerdeDetailsProps) {
+export function AreaVerdeDetails({ area, onClose, onEdit, onUpdateLastVisited }: AreaVerdeDetailsProps) {
   const getDaysSinceVisit = (lastVisited: Date) => {
     return Math.floor((Date.now() - lastVisited.getTime()) / (1000 * 60 * 60 * 24))
   }
@@ -102,10 +103,17 @@ export function AreaVerdeDetails({ area, onClose, onEdit }: AreaVerdeDetailsProp
       </Card>
 
       <div className="flex gap-3 pt-4 border-t">
+        {onEdit && (
         <Button onClick={onEdit} className="flex-1">
           <Edit className="h-4 w-4 mr-2" />
           Editar
         </Button>
+        )}
+        {onUpdateLastVisited && (
+        <Button onClick={onUpdateLastVisited} variant="secondary" className="flex-1">
+          Marcar como visitada
+        </Button>
+        )}
         <Button variant="outline" onClick={onClose} className="flex-1">
           Cerrar
         </Button>

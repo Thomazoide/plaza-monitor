@@ -27,8 +27,7 @@ export const generateVehicleTracking = (vehiculoId: number): TrackingData => {
     const lat = position.lat + (Math.random() - 0.5) * 0.001
     const lng = position.lng + (Math.random() - 0.5) * 0.001
 
-    route.push({
-      id: i + 1,
+  route.push({
       vehiculoId,
       lat,
       lng,
@@ -61,7 +60,6 @@ export const updateVehiclePosition = (currentTracking: TrackingData): TrackingDa
   const newLng = lastPosition.lng + (Math.random() - 0.5) * 0.0005
 
   const newPosition: VehiclePosition = {
-    id: lastPosition.id + 1,
     vehiculoId: lastPosition.vehiculoId,
     lat: newLat,
     lng: newLng,
