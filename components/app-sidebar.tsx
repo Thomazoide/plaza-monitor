@@ -55,6 +55,11 @@ const resourceItems = [
     icon: MapPin,
   },
   {
+    title: "Reportes",
+    url: "/reportes",
+    icon: FileText,
+  },
+  {
     title: "Dispositivos",
     url: "/dispositivos",
     icon: Smartphone,
