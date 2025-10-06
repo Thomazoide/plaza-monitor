@@ -9,7 +9,7 @@ import { getEquipos } from "@/data/escuadras-data"
 import { useTracking } from "@/context/tracking-context"
 import type { Equipo } from "@/types/escuadras-types"
 
-// Helper function to safely format date
+
 const formatTime = (dateValue: Date | string | number): string => {
   try {
     const date = dateValue instanceof Date ? dateValue : new Date(dateValue)

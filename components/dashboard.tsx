@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { greenAreas } from "@/data/green-areas"
+import { fetchGreenAreas } from "@/data/zonas-data"
 import { calculateAreaStatistics } from "@/utils/statistics"
 import {
   AlertTriangle,
@@ -29,10 +29,12 @@ export default function Dashboard() {
   const [showTrendInfo, setShowTrendInfo] = useState(false)
 
   useEffect(() => {
-    // Calcular estadísticas
-    const statistics = calculateAreaStatistics(greenAreas)
-    console.log("Estadísticas calculadas:", statistics)
-    setStats(statistics)
+    const load = async () => {
+      const areas = await fetchGreenAreas()
+      const statistics = calculateAreaStatistics(areas)
+      setStats(statistics)
+    }
+    load()
   }, [])
 
   if (!stats) {

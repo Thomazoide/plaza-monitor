@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, X } from "lucide-react"
 import { getSupervisores, getVehiculos, getEquipos } from "@/data/escuadras-data"
-import { getZonas } from "@/data/zonas-data"
+import { fetchGreenAreas } from "@/data/zonas-data"
 import type { CreateEquipoData, Supervisor, Vehiculo, Equipo, Zona } from "@/types/escuadras-types"
 
 interface CreateEquipoFormProps {
@@ -40,16 +40,16 @@ export function CreateEquipoForm({ onBack }: CreateEquipoFormProps) {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const [supervisoresData, vehiculosData, equiposData, zonasData] = await Promise.all([
+        const [supervisoresData, vehiculosData, equiposData, greenAreas] = await Promise.all([
           getSupervisores(),
           getVehiculos(),
           getEquipos(),
-          getZonas()
+          fetchGreenAreas()
         ])
         setSupervisores(supervisoresData)
         setVehiculos(vehiculosData)
         setEquipos(equiposData)
-        setZonas(zonasData)
+        setZonas(greenAreas.map(a => ({ id: a.id, nombre: a.name, descripcion: a.info, coordenadas: a.coordinates, activa: true })))
       } catch (error) {
         console.error('Error loading data:', error)
       } finally {

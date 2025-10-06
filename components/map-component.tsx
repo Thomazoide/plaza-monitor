@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Loader } from "@googlemaps/js-api-loader"
-import { greenAreas } from "@/data/green-areas"
+import { fetchGreenAreas } from "@/data/zonas-data"
 import { MapPin, Search, X } from "lucide-react"
 import type { Vehiculo, Equipo } from "@/types/escuadras-types"
 import type { TrackingData } from "@/types/tracking-types"
@@ -28,7 +28,21 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
   const mapInstanceRef = useRef<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [showAreaList, setShowAreaList] = useState(false)
-  const [filteredAreas, setFilteredAreas] = useState(greenAreas)
+  const [areas, setAreas] = useState<any[]>([])
+  const [filteredAreas, setFilteredAreas] = useState<any[]>([])
+
+  // load areas from backend
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      const data = await fetchGreenAreas()
+      if (cancelled) return
+      setAreas(data)
+      setFilteredAreas(data)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   const vehicleMarkersRef = useRef<Record<number, any>>({})
   const { vehicleTrackings } = useTracking()
@@ -50,9 +64,9 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredAreas(greenAreas)
+      setFilteredAreas(areas)
     } else {
-      const filtered = greenAreas.filter((area) => area.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      const filtered = areas.filter((area) => area.name.toLowerCase().includes(searchTerm.toLowerCase()))
       setFilteredAreas(filtered)
     }
   }, [searchTerm])
@@ -120,15 +134,14 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
         mapInstanceRef.current = mapInstance
         infoWindowRef.current = new google.maps.InfoWindow()
 
-        greenAreas.forEach((area) => {
+  areas.forEach((area) => {
           const now = new Date()
-          const timeDiff = now.getTime() - area.lastVisited.getTime()
-          const daysDiff = timeDiff / (1000 * 3600 * 24)
+          const daysDiff = area.lastVisited ? (now.getTime() - area.lastVisited.getTime()) / (1000 * 3600 * 24) : Infinity
           const fillColor = daysDiff < 1 ? "#22c55e" : daysDiff < 3 ? "#f97316" : "#ef4444"
           const statusText =
-            daysDiff < 1
+            Number.isFinite(daysDiff) && daysDiff < 1
               ? "Visitado recientemente"
-              : daysDiff < 3
+              : Number.isFinite(daysDiff) && daysDiff < 3
                 ? "Visitado hace más de 24 horas y menos de 3 días"
                 : "Visitado hace más de 3 días"
 
@@ -150,7 +163,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
                    <h3 style="font-weight: bold; margin-bottom: 5px;">${area.name}</h3>
                    <p style="margin-bottom: 5px;">${area.info}</p>
                    <p style="font-style: italic; margin-bottom: 5px;">${statusText}</p>
-                   <p style="font-size: 0.8rem;">Última visita: ${area.lastVisited.toLocaleDateString()}</p>
+                   <p style="font-size: 0.8rem;">Última visita: ${area.lastVisited ? area.lastVisited.toLocaleDateString() : "Sin visitas"}</p>
                  </div>`,
               )
               infoWindowRef.current.setPosition(e.latLng)
@@ -171,7 +184,7 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
     return () => {
       infoWindowRef.current?.close()
     }
-  }, [apiKey])
+  }, [apiKey, areas])
 
   useEffect(() => {
     if (!isMapReady || !mapInstanceRef.current) return
@@ -228,10 +241,12 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
     })
   }, [isMapReady, vehicleTrackings, vehiculos, escuadras])
 
-  const centerMapOnArea = (area: (typeof greenAreas)[0]) => {
+  const centerMapOnArea = (area: any) => {
     if (!mapInstanceRef.current || !window.google) return
     const bounds = new window.google.maps.LatLngBounds()
-    area.coordinates.forEach((coord) => bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng)))
+    area.coordinates.forEach((coord: { lat: number; lng: number }) =>
+      bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng)),
+    )
     mapInstanceRef.current.fitBounds(bounds)
     mapInstanceRef.current.setZoom(Math.min(18, mapInstanceRef.current.getZoom() || 15))
     setShowAreaList(false)
@@ -240,17 +255,18 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
   const showAllAreas = () => {
     if (!mapInstanceRef.current || !window.google) return
     const bounds = new window.google.maps.LatLngBounds()
-    greenAreas.forEach((area) =>
-      area.coordinates.forEach((coord) => bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng))),
+    areas.forEach((area) =>
+      area.coordinates.forEach((coord: { lat: number; lng: number }) =>
+        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng)),
+      ),
     )
     mapInstanceRef.current.fitBounds(bounds)
     setShowAreaList(false)
   }
 
-  const getAreaButtonColor = (area: (typeof greenAreas)[0]) => {
+  const getAreaButtonColor = (area: any) => {
     const now = new Date()
-    const timeDiff = now.getTime() - area.lastVisited.getTime()
-    const daysDiff = timeDiff / (1000 * 3600 * 24)
+    const daysDiff = area.lastVisited ? (now.getTime() - area.lastVisited.getTime()) / (1000 * 3600 * 24) : Infinity
     if (daysDiff < 1) return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
     if (daysDiff < 3) return "bg-orange-100 text-orange-800 hover:bg-orange-200 border-orange-300"
     return "bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
@@ -313,10 +329,9 @@ export default function MapComponent({ vehiculos, escuadras }: MapComponentProps
                   >
                     <span className="truncate">{area.name}</span>
                     <span className="text-xs ml-1 whitespace-nowrap">
-                      {new Date(area.lastVisited).toLocaleDateString("es-CL", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
+                      {area.lastVisited
+                        ? area.lastVisited.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })
+                        : "Sin visitas"}
                     </span>
                   </button>
                 ))

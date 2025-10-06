@@ -17,7 +17,8 @@ export function ListaAreasVerdes({ areasVerdes, onViewOnMap, onShowDetails, onUp
     return <p className="text-sm text-gray-500 text-center py-4">No hay áreas verdes registradas.</p>
   }
 
-  const getDaysSinceVisit = (lastVisited: Date) => {
+  const getDaysSinceVisit = (lastVisited: Date | null) => {
+    if (!lastVisited) return Infinity
     return Math.floor((Date.now() - lastVisited.getTime()) / (1000 * 60 * 60 * 24))
   }
 
@@ -30,7 +31,7 @@ export function ListaAreasVerdes({ areasVerdes, onViewOnMap, onShowDetails, onUp
   return (
     <div className="space-y-3 max-h-[450px] overflow-y-auto">
       {areasVerdes.map((area) => {
-        const daysSinceVisit = getDaysSinceVisit(area.lastVisited)
+  const daysSinceVisit = getDaysSinceVisit(area.lastVisited)
         const visitStatus = getVisitStatus(daysSinceVisit)
         
         return (
@@ -53,9 +54,13 @@ export function ListaAreasVerdes({ areasVerdes, onViewOnMap, onShowDetails, onUp
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
               <Calendar size={12} />
               <span>
-                {daysSinceVisit === 0 ? "Visitada hoy" : 
-                 daysSinceVisit === 1 ? "Hace 1 día" :
-                 `Hace ${daysSinceVisit} días`}
+                {Number.isFinite(daysSinceVisit)
+                  ? daysSinceVisit === 0
+                    ? "Visitada hoy"
+                    : daysSinceVisit === 1
+                      ? "Hace 1 día"
+                      : `Hace ${daysSinceVisit} días`
+                  : "Sin visitas registradas"}
               </span>
             </div>
             
