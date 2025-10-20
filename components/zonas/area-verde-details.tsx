@@ -14,7 +14,8 @@ interface AreaVerdeDetailsProps {
 }
 
 export function AreaVerdeDetails({ area, onClose, onEdit, onUpdateLastVisited }: AreaVerdeDetailsProps) {
-  const getDaysSinceVisit = (lastVisited: Date) => {
+  const getDaysSinceVisit = (lastVisited: Date | null) => {
+    if (!lastVisited) return Infinity
     return Math.floor((Date.now() - lastVisited.getTime()) / (1000 * 60 * 60 * 24))
   }
 
@@ -25,7 +26,7 @@ export function AreaVerdeDetails({ area, onClose, onEdit, onUpdateLastVisited }:
   }
 
   const daysSinceVisit = getDaysSinceVisit(area.lastVisited)
-  const visitStatus = getVisitStatus(daysSinceVisit)
+  const visitStatus = getVisitStatus(Number.isFinite(daysSinceVisit) ? (daysSinceVisit as number) : 9999)
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('es-CL', {
@@ -61,14 +62,20 @@ export function AreaVerdeDetails({ area, onClose, onEdit, onUpdateLastVisited }:
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600">
-              {formatDate(area.lastVisited)}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {daysSinceVisit === 0 ? "Visitada hoy" : 
-               daysSinceVisit === 1 ? "Hace 1 día" :
-               `Hace ${daysSinceVisit} días`}
-            </p>
+            {area.lastVisited ? (
+              <>
+                <p className="text-sm text-gray-600">{formatDate(area.lastVisited)}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {daysSinceVisit === 0
+                    ? "Visitada hoy"
+                    : daysSinceVisit === 1
+                      ? "Hace 1 día"
+                      : `Hace ${daysSinceVisit} días`}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-600">Sin visitas registradas</p>
+            )}
           </CardContent>
         </Card>
 
@@ -99,6 +106,10 @@ export function AreaVerdeDetails({ area, onClose, onEdit, onUpdateLastVisited }:
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-700">{area.info}</p>
+          <div className="mt-2 text-sm">
+            <span className="font-medium">Dispositivo BLE:</span>{" "}
+            {area.beaconId ? `Asignado (ID ${area.beaconId})` : "No asignado"}
+          </div>
         </CardContent>
       </Card>
 

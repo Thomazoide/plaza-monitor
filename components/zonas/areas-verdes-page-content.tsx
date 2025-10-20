@@ -1,21 +1,37 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { TreePine, List, Calendar, Info } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { greenAreas as initialGreenAreasData } from "@/data/green-areas"
+import { fetchGreenAreas } from "@/data/zonas-data"
 import type { GreenArea } from "@/types/map-types"
 import { MapaAreasVerdes } from "./mapa-areas-verdes"
 import { ListaAreasVerdes } from "./lista-areas-verdes"
 import { AreaVerdeDetails } from "./area-verde-details"
 
 export function AreasVerdesPageContent() {
-  const [areasVerdes, setAreasVerdes] = useState<GreenArea[]>(initialGreenAreasData)
+  const [areasVerdes, setAreasVerdes] = useState<GreenArea[]>([])
   const [selectedArea, setSelectedArea] = useState<GreenArea | null>(null)
   const [showAreaDetails, setShowAreaDetails] = useState(false)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: -33.6119, lng: -70.5758 }) // Centro de Puente Alto
   const [mapZoom, setMapZoom] = useState<number>(13)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+      const data = await fetchGreenAreas()
+      if (cancelled) return
+      setAreasVerdes(data)
+      setLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   // util sencillo para hallar centro aproximado del polígono
   function getPolygonCenter(coords: { lat: number; lng: number }[]) {
@@ -56,10 +72,12 @@ export function AreasVerdesPageContent() {
   // Estadísticas
   const totalAreas = areasVerdes.length
   const areasRecentesVisitadas = areasVerdes.filter(area => {
+    if (!area.lastVisited) return false
     const daysSinceVisit = Math.floor((Date.now() - area.lastVisited.getTime()) / (1000 * 60 * 60 * 24))
     return daysSinceVisit <= 7
   }).length
   const areasSinVisitar = areasVerdes.filter(area => {
+    if (!area.lastVisited) return true
     const daysSinceVisit = Math.floor((Date.now() - area.lastVisited.getTime()) / (1000 * 60 * 60 * 24))
     return daysSinceVisit > 30
   }).length

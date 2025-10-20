@@ -115,9 +115,16 @@ export function MapaAreasVerdes({ areasVerdes, selectedAreaId, center, zoom, onA
       // Agregar listener para clicks
       polygon.addListener("click", (event: google.maps.MapMouseEvent) => {
         if (event.latLng && infoWindowRef.current) {
-          const daysSinceVisit = Math.floor((Date.now() - area.lastVisited.getTime()) / (1000 * 60 * 60 * 24))
-          const visitStatus = daysSinceVisit <= 7 ? "Visitada recientemente" : 
-                             daysSinceVisit <= 30 ? "Estado normal" : "Requiere atención"
+          const daysSinceVisit = area.lastVisited
+            ? Math.floor((Date.now() - area.lastVisited.getTime()) / (1000 * 60 * 60 * 24))
+            : Infinity
+          const visitStatus = Number.isFinite(daysSinceVisit)
+            ? daysSinceVisit <= 7
+              ? "Visitada recientemente"
+              : daysSinceVisit <= 30
+                ? "Estado normal"
+                : "Requiere atención"
+            : "Sin visitas registradas"
           
           infoWindowRef.current.setContent(`
             <div style="padding: 8px;">
@@ -127,7 +134,13 @@ export function MapaAreasVerdes({ areasVerdes, selectedAreaId, center, zoom, onA
                 Estado: ${visitStatus}
               </p>
               <p style="margin: 4px 0 0 0; color: #9ca3af; font-size: 12px;">
-                Última visita: ${daysSinceVisit === 0 ? "Hoy" : daysSinceVisit === 1 ? "Hace 1 día" : `Hace ${daysSinceVisit} días`}
+                Última visita: ${Number.isFinite(daysSinceVisit)
+                  ? (daysSinceVisit === 0
+                      ? "Hoy"
+                      : daysSinceVisit === 1
+                        ? "Hace 1 día"
+                        : `Hace ${daysSinceVisit} días`)
+                  : "No registrada"}
               </p>
             </div>
           `)

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import FormVisor from "@/components/formularios/formulario-visor"
 import { fetchVisitFormsByZona } from "@/data/visit-forms-data"
-import { greenAreas } from "@/data/green-areas"
+import { fetchGreenAreas } from "@/data/zonas-data"
 import type { VisitFormType } from "@/types/visitForms-types"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -19,7 +19,17 @@ export default function ReportesPage() {
 	const [forms, setForms] = useState<VisitFormType[]>([])
 	const [search, setSearch] = useState("")
 
-	const zonas = useMemo(() => greenAreas.map(z => ({ id: z.id, name: z.name })), [])
+		const [zonas, setZonas] = useState<{ id: number; name: string }[]>([])
+
+		useEffect(() => {
+			let cancelled = false
+			const loadZonas = async () => {
+				const areas = await fetchGreenAreas()
+				if (!cancelled) setZonas(areas.map(z => ({ id: z.id, name: z.name })))
+			}
+			loadZonas()
+			return () => { cancelled = true }
+		}, [])
 
 	useEffect(() => {
 		if (selectedZonaId == null) return
