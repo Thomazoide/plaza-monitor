@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MapPin, List } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,14 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { zonas as initialZonasData } from "@/data/zonas-data"
+import { getZonas } from "@/data/zonas-data"
 import type { Zona } from "@/types/escuadras-types"
 import { MapaZonas } from "./mapa-zonas"
 import { ZonaForm } from "./zona-form"
 import { ListaZonas } from "./lista-zonas"
 
 export function ZonasPageContent() {
-  const [zonas, setZonas] = useState<Zona[]>(initialZonasData)
+  const [zonas, setZonas] = useState<Zona[]>([])
   const [selectedZona, setSelectedZona] = useState<Zona | null>(null)
   const [zonaToEdit, setZonaToEdit] = useState<Zona | null>(null)
   const [showZonaForm, setShowZonaForm] = useState(false)
@@ -29,6 +29,22 @@ export function ZonasPageContent() {
   const [drawingCoords, setDrawingCoords] = useState<{ lat: number; lng: number }[] | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: -33.6119, lng: -70.5758 }) // Centro de Puente Alto
   const [mapZoom, setMapZoom] = useState<number>(13)
+
+  // Cargar zonas desde el backend al montar
+  useEffect(() => {
+    let isMounted = true
+    ;(async () => {
+      try {
+        const z = await getZonas()
+        if (isMounted) setZonas(z)
+      } catch (e) {
+        console.error("Error cargando zonas:", e)
+      }
+    })()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handlePolygonComplete = (coords: { lat: number; lng: number }[]) => {
     setDrawingCoords(coords)

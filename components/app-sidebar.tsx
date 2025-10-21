@@ -69,6 +69,11 @@ const resourceItems = [
     url: "/registros",
     icon: FileText,
   },
+  {
+    title: "Órdenes de Trabajo",
+    url: "/ordenes-de-trabajo",
+    icon: FileText,
+  },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
