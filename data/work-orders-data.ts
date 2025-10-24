@@ -47,16 +47,20 @@ export interface CreateWorkOrderPayload {
   descripcion: string
   tipo: WorkOrderType
   equipoID: number | null
-  zonaId: number | null
+  zonaID: number | null
 }
 
 export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<WorkOrder | null> {
   try {
     const endpoint = await getBackendEndpoint()
+    const body = {
+      ...payload,
+      zonaId: payload.zonaID,
+    }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const json = (await resp.json()) as ResponsePayload<WorkOrder>
@@ -88,10 +92,14 @@ export interface UpdateWorkOrderPayload extends CreateWorkOrderPayload {
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<WorkOrder | null> {
   try {
     const endpoint = await getBackendEndpoint()
+    const body = {
+      ...payload,
+      zonaId: payload.zonaID,
+    }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const json = (await resp.json()) as ResponsePayload<WorkOrder>
@@ -113,11 +121,36 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
   }
 }
 
+export async function deleteWorkOrder(id: number): Promise<boolean> {
+  try {
+    const endpoint = await getBackendEndpoint()
+    const resp = await fetch(`${endpoint}/ordenes/${id}`, {
+      method: "DELETE",
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const json = (await resp.json()) as ResponsePayload<unknown>
+    if (json.error) {
+      console.error("Backend error al eliminar orden:", json.message)
+      return false
+    }
+    return true
+  } catch (e) {
+    console.error("deleteWorkOrder error:", e)
+    return false
+  }
+}
+
 function normalizeOrders(arr: WorkOrder[]): WorkOrder[] {
-  return arr.map((o) => ({
-    ...o,
-    // Aseguramos que las fechas sean objetos Date cuando vengan como string
-    creada_en: o.creada_en ? new Date(o.creada_en) : new Date(),
-    completada_en: o.completada_en ? new Date(o.completada_en) : null,
-  }))
+  return arr.map((order) => {
+    const anyOrder = order as any
+    const zonaID = typeof anyOrder.zonaID === "number" ? anyOrder.zonaID : typeof anyOrder.zonaId === "number" ? anyOrder.zonaId : null
+    return {
+      ...anyOrder,
+      zonaID,
+      zona: anyOrder.zona ?? null,
+      // Aseguramos que las fechas sean objetos Date cuando vengan como string
+      creada_en: anyOrder.creada_en ? new Date(anyOrder.creada_en) : new Date(),
+      completada_en: anyOrder.completada_en ? new Date(anyOrder.completada_en) : null,
+    } as WorkOrder
+  })
 }

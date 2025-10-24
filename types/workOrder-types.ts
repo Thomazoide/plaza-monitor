@@ -1,4 +1,4 @@
-import { Equipo } from "./escuadras-types";
+import { Equipo, Zona } from "./escuadras-types";
 import { VisitFormType } from "./visitForms-types";
 
 export type WorkOrderType = "Areas verdes" | "Emergencias" | "Obras publicas";
@@ -13,5 +13,7 @@ export interface WorkOrder {
     equipo: Equipo | null;
     visitFormID: number | null;
     visitForm: VisitFormType | null;
+    zonaID: number | null;
+    zona: Zona | null;
     tipo: WorkOrderType;
 }

@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Plus, ClipboardList, CheckCircle2, Clock } from "lucide-react"
+import { Plus, ClipboardList, CheckCircle2, Clock, Trash2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { WorkOrder, WorkOrderType } from "@/types/workOrder-types"
-import { getWorkOrders, createWorkOrder, type CreateWorkOrderPayload, updateWorkOrder } from "@/data/work-orders-data"
+import { getWorkOrders, createWorkOrder, type CreateWorkOrderPayload, updateWorkOrder, deleteWorkOrder } from "@/data/work-orders-data"
 import { getEquipos } from "@/data/escuadras-data"
 import { getZonas } from "@/data/zonas-data"
 import type { Equipo, Zona } from "@/types/escuadras-types"
@@ -25,12 +25,13 @@ export function OrdenesDeTrabajoPageContent() {
   const [open, setOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selected, setSelected] = useState<WorkOrder | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state
   const [descripcion, setDescripcion] = useState("")
   const [tipo, setTipo] = useState<WorkOrderType>("Areas verdes")
   const [equipoId, setEquipoId] = useState<number | "">("")
-  const [zonaId, setZonaId] = useState<number | "">("")
+  const [selectedZonaId, setSelectedZonaId] = useState<number | "">("")
 
   // Aux data
   const [equipos, setEquipos] = useState<Equipo[]>([])
@@ -64,7 +65,7 @@ export function OrdenesDeTrabajoPageContent() {
     setDescripcion("")
     setTipo("Areas verdes")
     setEquipoId("")
-    setZonaId("")
+  setSelectedZonaId("")
   }
 
   const onCreate = async () => {
@@ -72,7 +73,7 @@ export function OrdenesDeTrabajoPageContent() {
       descripcion: descripcion.trim(),
       tipo,
       equipoID: equipoId === "" ? null : Number(equipoId),
-      zonaId: zonaId === "" ? null : Number(zonaId),
+  zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
     }
 
     if (!payload.descripcion) return
@@ -92,7 +93,13 @@ export function OrdenesDeTrabajoPageContent() {
     setTipo(o.tipo)
     setEquipoId(o.equipoID ?? "")
     const anyOrder: any = o as any
-    setZonaId(typeof anyOrder.zonaId === "number" ? anyOrder.zonaId : "")
+    const zonaIdFromOrder =
+      typeof anyOrder.zonaID === "number"
+        ? anyOrder.zonaID
+        : typeof anyOrder.zonaId === "number"
+          ? anyOrder.zonaId
+          : ""
+    setSelectedZonaId(zonaIdFromOrder)
     setDetailsOpen(true)
   }
 
@@ -103,7 +110,7 @@ export function OrdenesDeTrabajoPageContent() {
       descripcion: descripcion.trim(),
       tipo,
       equipoID: equipoId === "" ? null : Number(equipoId),
-      zonaId: zonaId === "" ? null : Number(zonaId),
+  zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
     }
     if (!payload.descripcion) return
     const updated = await updateWorkOrder(payload)
@@ -113,6 +120,28 @@ export function OrdenesDeTrabajoPageContent() {
       // mantener abierto el detalle
     }
   }
+
+  const onDelete = async () => {
+    if (!selected || isDeleting) return
+    const confirmed = window.confirm(`¿Eliminar la orden #${selected.id}? Esta acción no se puede deshacer.`)
+    if (!confirmed) return
+    setIsDeleting(true)
+    const success = await deleteWorkOrder(selected.id)
+    if (success) {
+      setOrders((prev) => prev.filter((o) => o.id !== selected.id))
+      setDetailsOpen(false)
+      setSelected(null)
+    }
+    setIsDeleting(false)
+  }
+
+  useEffect(() => {
+    if (!detailsOpen) {
+      setSelected(null)
+      setIsDeleting(false)
+      setSelectedZonaId("")
+    }
+  }, [detailsOpen])
 
   return (
     <div className="p-6 space-y-6">
@@ -144,8 +173,14 @@ export function OrdenesDeTrabajoPageContent() {
                 const equipo = o.equipo || (o.equipoID ? equiposMap.get(o.equipoID) || null : null)
                 const zonaName = ((): string | null => {
                   const anyOrder: any = o as any
-                  if (typeof anyOrder.zonaId === "number") {
-                    return zonasMap.get(anyOrder.zonaId)?.nombre ?? null
+                  const zonaIdValue =
+                    typeof anyOrder.zonaID === "number"
+                      ? anyOrder.zonaID
+                      : typeof anyOrder.zonaId === "number"
+                        ? anyOrder.zonaId
+                        : null
+                  if (typeof zonaIdValue === "number") {
+                    return zonasMap.get(zonaIdValue)?.nombre ?? null
                   }
                   if (anyOrder.zona && typeof anyOrder.zona?.nombre === "string") return anyOrder.zona.nombre
                   return null
@@ -264,8 +299,8 @@ export function OrdenesDeTrabajoPageContent() {
                     <select
                       id="edit-zona"
                       className="border rounded-md h-9 px-3 text-sm bg-white"
-                      value={zonaId}
-                      onChange={(e) => setZonaId(e.target.value ? Number(e.target.value) : "")}
+                      value={selectedZonaId}
+                      onChange={(e) => setSelectedZonaId(e.target.value ? Number(e.target.value) : "")}
                     >
                       <option value="">Sin zona</option>
                       {zonas.map((z) => (
@@ -304,6 +339,12 @@ export function OrdenesDeTrabajoPageContent() {
                   )}
                 </div>
               )}
+              <div className="flex justify-end pt-2">
+                <Button variant="destructive" onClick={onDelete} disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? "Eliminando..." : "Eliminar orden"}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -355,8 +396,8 @@ export function OrdenesDeTrabajoPageContent() {
               <select
                 id="zona"
                 className="border rounded-md h-9 px-3 text-sm bg-white"
-                value={zonaId}
-                onChange={(e) => setZonaId(e.target.value ? Number(e.target.value) : "")}
+                value={selectedZonaId}
+                onChange={(e) => setSelectedZonaId(e.target.value ? Number(e.target.value) : "")}
               >
                 <option value="">Sin zona</option>
                 {zonas.map((z) => (
