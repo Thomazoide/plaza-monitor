@@ -225,12 +225,13 @@ export function OrdenesDeTrabajoPageContent() {
 
       {/* Detalle de Orden */}
       <Dialog open={detailsOpen} onOpenChange={(v) => setDetailsOpen(v)}>
-        <DialogContent className="sm:max-w-[720px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Detalle de Orden #{selected?.id}</DialogTitle>
           </DialogHeader>
           {selected && (
-            <div className="grid gap-4">
+            <div className="mt-4 flex-1 overflow-y-auto pr-1">
+              <div className="grid gap-4 pb-2 pr-1">
               <div className="text-sm text-gray-600">
                 <div>Estado: {selected.completada ? "Completada" : "Pendiente"}</div>
                 <div>Tipo: {selected.tipo}</div>
@@ -344,6 +345,7 @@ export function OrdenesDeTrabajoPageContent() {
                   <Trash2 className="h-4 w-4 mr-2" />
                   {isDeleting ? "Eliminando..." : "Eliminar orden"}
                 </Button>
+              </div>
               </div>
             </div>
           )}
