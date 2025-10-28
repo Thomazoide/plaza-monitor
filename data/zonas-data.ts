@@ -42,6 +42,9 @@ export async function fetchGreenAreas(): Promise<GreenArea[]> {
       info: item.info ?? "",
       beaconId: item.beaconId ?? null,
       lastVisited: item.lastVisited ? new Date(item.lastVisited) : null,
+      beacon: item.beacon ?? null,
+      formularios: item.formularios ?? [],
+      workOrders: item.workOrders ?? [],
     }))
   } catch (e) {
     console.error("fetchGreenAreas error:", e)

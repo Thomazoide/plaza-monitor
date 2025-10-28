@@ -1,30 +1,29 @@
-# Custom Map Styling
+# Plaza Monitor
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+Aplicación web construida con Next.js 14 para visualizar y administrar en tiempo real la operación de áreas verdes de una comuna. El panel integra mapas, dashboards y módulos de gestión para coordinar equipos en terreno, dispositivos IoT y órdenes de trabajo que provienen de un backend REST.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/thomazoides-projects/v0-custom-map-styling)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/bdodKJZseJK)
+## Características principales
+- **Panel operativo** con métricas de cobertura, alertas y análisis de tendencias calculados a partir de los datos de zonas verdes (`components/dashboard.tsx`, `utils/statistics.ts`).
+- **Mapa en tiempo real** que usa Google Maps y WebSockets (`lib/socket.ts`, `context/tracking-context.tsx`) para seguir la flota municipal y actualizar recorridos con animaciones suaves.
+- **Gestión de recursos** para trabajadores, supervisores, equipos, vehículos y zonas; cada módulo consume los endpoints del backend desde el directorio `data/` y comparte componentes de interfaz (`components/ui`).
+- **Administración de dispositivos** beacon con formularios de alta, edición, asignaciones y alertas de batería (`components/dispositivos`).
+- **Órdenes de trabajo** end-to-end: creación, edición y eliminación sincronizadas con el servicio externo, incluyendo asignación opcional de equipo y zona (`components/ordenes`, `data/work-orders-data.ts`).
+- **Reportes y registros históricos** con filtros por fecha y zona para auditar visitas, incidencias y formularios asociados.
 
-## Overview
+## Arquitectura y stack
+- Next.js (App Router) con componentes cliente en `app/` y proveedores compartidos (`TrackingProvider`, `ReactQueryProvider`).
+- Tailwind CSS y la librería de componentes basada en Radix (shadcn/ui) para construir la interfaz responsiva.
+- React Query para caches declarativos cuando se requiere sincronizar datos remotos.
+- Integración con Google Maps JavaScript API y Socket.IO para telemetría vehicular.
+- Consumo centralizado de servicios REST mediante funciones en `data/`, que resuelven el endpoint mediante `/api/get-backend-endpoint` para permitir configuraciones locales o productivas.
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Flujo de datos
+1. El front obtiene el endpoint del backend (`/api/get-backend-endpoint`) y llama a los recursos correspondientes (`ordenes`, `vehiculos`, `zonas`, etc.).
+2. Los datos se normalizan en las utilidades de `data/` para uniformar fechas, relaciones (ej. `zonaID`, `equipo`) y payloads de formularios.
+3. Los contextos (`TrackingProvider`) y hooks de cada módulo mantienen el estado derivado y actualizan la UI sin refrescar la página.
+4. Los eventos en vivo llegan vía Socket.IO y actualizan la posición de los vehículos, manteniendo la ruta reciente en memoria.
 
-## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/thomazoides-projects/v0-custom-map-styling](https://vercel.com/thomazoides-projects/v0-custom-map-styling)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.dev/chat/projects/bdodKJZseJK](https://v0.dev/chat/projects/bdodKJZseJK)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## Desarrollo
+- Instala dependencias con `pnpm install`.
+- Ejecuta el entorno de desarrollo con `pnpm dev` y define las variables requeridas para Google Maps y el backend (ver `app/api/get-map-key` y `app/api/get-backend-endpoint`).
+- Ajusta o extiende los módulos reutilizando las funciones del directorio `data/` y los componentes UI compartidos.
