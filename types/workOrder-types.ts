@@ -16,4 +16,6 @@ export interface WorkOrder {
     zonaID: number | null;
     zona: Zona | null;
     tipo: WorkOrderType;
+    lat: number | null;
+    lng: number | null;
 }

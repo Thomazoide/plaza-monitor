@@ -1,5 +1,6 @@
 import type { WorkOrder, WorkOrderType } from "@/types/workOrder-types"
 import type { ResponsePayload } from "@/types/response-types"
+import { SuperForm } from "@/types/super-form-types"
 
 // Helper to get backend base URL from our API route
 const getBackendEndpoint = async (): Promise<string> => {
@@ -13,6 +14,22 @@ const getBackendEndpoint = async (): Promise<string> => {
     console.error("Error obteniendo endpoint backend:", err)
     return process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || "http://localhost:8888"
   }
+}
+
+export async function getSuperForms(): Promise<SuperForm[]> {
+  const endpoint = await getBackendEndpoint();
+  const resp = await fetch(`${endpoint}/super-form`);
+  if(!resp.ok) {
+    console.error("error");
+    return [];
+  }
+  const json = (await resp.json()) as ResponsePayload<SuperForm[]>;
+  if(json.error) {
+    console.log("error: ", json.message);
+  }
+  const data = json.data || [];
+  if(Array.isArray(data)) return data;
+  return data!;
 }
 
 export async function getWorkOrders(): Promise<WorkOrder[]> {
@@ -48,6 +65,8 @@ export interface CreateWorkOrderPayload {
   tipo: WorkOrderType
   equipoID: number | null
   zonaID: number | null
+  lat: number | null
+  lng: number | null
 }
 
 export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<WorkOrder | null> {
@@ -56,6 +75,8 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
     const body = {
       ...payload,
       zonaId: payload.zonaID,
+      lat: payload.lat,
+      lng: payload.lng,
     }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
@@ -95,6 +116,8 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
     const body = {
       ...payload,
       zonaId: payload.zonaID,
+      lat: payload.lat,
+      lng: payload.lng,
     }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
@@ -148,6 +171,22 @@ function normalizeOrders(arr: WorkOrder[]): WorkOrder[] {
       ...anyOrder,
       zonaID,
       zona: anyOrder.zona ?? null,
+      lat: (() => {
+        if (typeof anyOrder.lat === "number") return anyOrder.lat
+        if (typeof anyOrder.lat === "string") {
+          const parsed = Number(anyOrder.lat)
+          return Number.isFinite(parsed) ? parsed : null
+        }
+        return null
+      })(),
+      lng: (() => {
+        if (typeof anyOrder.lng === "number") return anyOrder.lng
+        if (typeof anyOrder.lng === "string") {
+          const parsed = Number(anyOrder.lng)
+          return Number.isFinite(parsed) ? parsed : null
+        }
+        return null
+      })(),
       // Aseguramos que las fechas sean objetos Date cuando vengan como string
       creada_en: anyOrder.creada_en ? new Date(anyOrder.creada_en) : new Date(),
       completada_en: anyOrder.completada_en ? new Date(anyOrder.completada_en) : null,

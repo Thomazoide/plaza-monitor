@@ -1,17 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Plus, ClipboardList, CheckCircle2, Clock, Trash2 } from "lucide-react"
+import { Plus, ClipboardList, CheckCircle2, Clock, Trash2, MapPin, RefreshCcw, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { WorkOrder, WorkOrderType } from "@/types/workOrder-types"
-import { getWorkOrders, createWorkOrder, type CreateWorkOrderPayload, updateWorkOrder, deleteWorkOrder } from "@/data/work-orders-data"
+import { getWorkOrders, createWorkOrder, type CreateWorkOrderPayload, updateWorkOrder, deleteWorkOrder, getSuperForms } from "@/data/work-orders-data"
 import { getEquipos } from "@/data/escuadras-data"
 import { getZonas } from "@/data/zonas-data"
 import type { Equipo, Zona } from "@/types/escuadras-types"
+import type { SuperForm } from "@/types/super-form-types"
 
 const WORK_ORDER_TYPES: WorkOrderType[] = [
   "Areas verdes",
@@ -26,12 +27,17 @@ export function OrdenesDeTrabajoPageContent() {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selected, setSelected] = useState<WorkOrder | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [refreshingSuperForms, setRefreshingSuperForms] = useState(false)
 
   // Form state
   const [descripcion, setDescripcion] = useState("")
   const [tipo, setTipo] = useState<WorkOrderType>("Areas verdes")
   const [equipoId, setEquipoId] = useState<number | "">("")
   const [selectedZonaId, setSelectedZonaId] = useState<number | "">("")
+  const [lat, setLat] = useState<string>("")
+  const [lng, setLng] = useState<string>("")
+  const [superForms, setSuperForms] = useState<SuperForm[]>([])
+  const [creatingFromSuperForm, setCreatingFromSuperForm] = useState<SuperForm | null>(null)
 
   // Aux data
   const [equipos, setEquipos] = useState<Equipo[]>([])
@@ -42,11 +48,12 @@ export function OrdenesDeTrabajoPageContent() {
     ;(async () => {
       try {
         setLoading(true)
-        const [ord, eqs, zs] = await Promise.all([getWorkOrders(), getEquipos(), getZonas()])
+  const [ord, eqs, zs, sf] = await Promise.all([getWorkOrders(), getEquipos(), getZonas(), getSuperForms()])
         if (!mounted) return
         setOrders(ord)
         setEquipos(eqs)
         setZonas(zs)
+  setSuperForms(sf)
       } catch (e) {
         console.error("Error cargando órdenes/equipos/zonas:", e)
       } finally {
@@ -60,12 +67,41 @@ export function OrdenesDeTrabajoPageContent() {
 
   const equiposMap = useMemo(() => new Map(equipos.map((e) => [e.id, e])), [equipos])
   const zonasMap = useMemo(() => new Map(zonas.map((z) => [z.id, z])), [zonas])
+  const availableSuperForms = useMemo(() => superForms.filter((form) => form.workOrderID == null), [superForms])
+
+  const refreshSuperForms = async () => {
+    if (refreshingSuperForms) return
+    setRefreshingSuperForms(true)
+    try {
+      const latest = await getSuperForms()
+      setSuperForms(latest)
+    } catch (error) {
+      console.error("Error recargando super formularios:", error)
+    } finally {
+      setRefreshingSuperForms(false)
+    }
+  }
+
+  const parseCoordinate = (value: string): number | null => {
+    if (value === "") return null
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  const formatCoordinate = (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined || value === "") return "-"
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed.toFixed(6) : "-"
+  }
 
   const resetForm = () => {
     setDescripcion("")
     setTipo("Areas verdes")
     setEquipoId("")
-  setSelectedZonaId("")
+    setSelectedZonaId("")
+    setLat("")
+    setLng("")
+    setCreatingFromSuperForm(null)
   }
 
   const onCreate = async () => {
@@ -73,7 +109,9 @@ export function OrdenesDeTrabajoPageContent() {
       descripcion: descripcion.trim(),
       tipo,
       equipoID: equipoId === "" ? null : Number(equipoId),
-  zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
+      zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
+      lat: parseCoordinate(lat),
+      lng: parseCoordinate(lng),
     }
 
     if (!payload.descripcion) return
@@ -81,6 +119,9 @@ export function OrdenesDeTrabajoPageContent() {
     const created = await createWorkOrder(payload)
     if (created) {
       setOrders((prev) => [created, ...prev])
+      if (creatingFromSuperForm) {
+        setSuperForms((prev) => prev.filter((form) => form.id !== creatingFromSuperForm.id))
+      }
       setOpen(false)
       resetForm()
     }
@@ -100,6 +141,8 @@ export function OrdenesDeTrabajoPageContent() {
           ? anyOrder.zonaId
           : ""
     setSelectedZonaId(zonaIdFromOrder)
+    setLat(typeof o.lat === "number" ? o.lat.toString() : "")
+    setLng(typeof o.lng === "number" ? o.lng.toString() : "")
     setDetailsOpen(true)
   }
 
@@ -110,7 +153,9 @@ export function OrdenesDeTrabajoPageContent() {
       descripcion: descripcion.trim(),
       tipo,
       equipoID: equipoId === "" ? null : Number(equipoId),
-  zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
+      zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
+      lat: parseCoordinate(lat),
+      lng: parseCoordinate(lng),
     }
     if (!payload.descripcion) return
     const updated = await updateWorkOrder(payload)
@@ -140,8 +185,21 @@ export function OrdenesDeTrabajoPageContent() {
       setSelected(null)
       setIsDeleting(false)
       setSelectedZonaId("")
+      setLat("")
+      setLng("")
     }
   }, [detailsOpen])
+
+  const handleCreateFromSuperForm = (form: SuperForm) => {
+    setDescripcion(form.description?.trim() || `Orden generada desde formulario #${form.id}`)
+    setTipo("Areas verdes")
+    setEquipoId("")
+    setSelectedZonaId("")
+    setLat(form.lat != null ? form.lat.toString() : "")
+    setLng(form.lng != null ? form.lng.toString() : "")
+    setCreatingFromSuperForm(form)
+    setOpen(true)
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -154,6 +212,62 @@ export function OrdenesDeTrabajoPageContent() {
           <Plus className="mr-2 h-4 w-4" /> Nueva Orden
         </Button>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Formularios prioritarios
+            </CardTitle>
+            <CardDescription>Genera una orden de trabajo basada en un Super Form.</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="inline-flex items-center gap-2"
+            onClick={refreshSuperForms}
+            disabled={refreshingSuperForms}
+          >
+            {refreshingSuperForms ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+            Actualizar
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {availableSuperForms.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay super formularios disponibles.</p>
+          ) : (
+            <div className="space-y-3">
+              {availableSuperForms.map((form) => (
+                <div
+                  key={form.id}
+                  className="border rounded-md p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-start gap-3">
+                    {form.pictureUrl ? (
+                      <div className="flex-shrink-0">
+                        <img
+                          src={form.pictureUrl}
+                          alt={`Foto formulario ${form.id}`}
+                          className="h-16 w-24 rounded-md object-cover border"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : null}
+                    <div>
+                      <p className="font-medium">Formulario #{form.id}</p>
+                      {form.description && <p className="text-sm text-gray-600">{form.description}</p>}
+                      <p className="text-xs text-gray-500">Lat: {formatCoordinate(form.lat)} • Lng: {formatCoordinate(form.lng)}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={() => handleCreateFromSuperForm(form)}>
+                    Crear orden desde este formulario
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -211,7 +325,11 @@ export function OrdenesDeTrabajoPageContent() {
                           ) : (
                             <span className="ml-3 text-gray-500">Sin equipo asignado</span>
                           )}
-                          {zonaName && <span className="ml-3">Zona: {zonaName}</span>}
+                          {zonaName ? (
+                            <span className="ml-3">Zona: {zonaName}</span>
+                          ) : o.lat != null && o.lng != null ? (
+                            <span className="ml-3">Coordenadas: {formatCoordinate(o.lat)} / {formatCoordinate(o.lng)}</span>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -238,6 +356,9 @@ export function OrdenesDeTrabajoPageContent() {
                 <div>Creada: {new Date(selected.creada_en).toLocaleString("es-CL")}</div>
                 {selected.completada && selected.completada_en && (
                   <div>Completada: {new Date(selected.completada_en).toLocaleString("es-CL")}</div>
+                )}
+                {(selected.lat != null || selected.lng != null) && (
+                  <div>Coordenadas: {formatCoordinate(selected.lat)} / {formatCoordinate(selected.lng)}</div>
                 )}
               </div>
 
@@ -311,6 +432,30 @@ export function OrdenesDeTrabajoPageContent() {
                       ))}
                     </select>
                   </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-lat">Latitud (opcional)</Label>
+                      <input
+                        id="edit-lat"
+                        type="number"
+                        step="any"
+                        className="border rounded-md h-9 px-3 text-sm bg-white"
+                        value={lat}
+                        onChange={(e) => setLat(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-lng">Longitud (opcional)</Label>
+                      <input
+                        id="edit-lng"
+                        type="number"
+                        step="any"
+                        className="border rounded-md h-9 px-3 text-sm bg-white"
+                        value={lng}
+                        onChange={(e) => setLng(e.target.value)}
+                      />
+                    </div>
+                  </div>
                   <div className="flex justify-end">
                     <Button onClick={onUpdate} disabled={!descripcion.trim()}>Guardar cambios</Button>
                   </div>
@@ -357,6 +502,11 @@ export function OrdenesDeTrabajoPageContent() {
           <DialogHeader>
             <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
           </DialogHeader>
+          {creatingFromSuperForm && (
+            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              Creando orden a partir del Super Form #{creatingFromSuperForm.id}. Puedes ajustar la descripción, asignar equipo u otros campos antes de guardar.
+            </div>
+          )}
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
               <Label htmlFor="descripcion">Descripción</Label>
@@ -408,6 +558,30 @@ export function OrdenesDeTrabajoPageContent() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="lat">Latitud (opcional)</Label>
+                <input
+                  id="lat"
+                  type="number"
+                  step="any"
+                  className="border rounded-md h-9 px-3 text-sm bg-white"
+                  value={lat}
+                  onChange={(e) => setLat(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="lng">Longitud (opcional)</Label>
+                <input
+                  id="lng"
+                  type="number"
+                  step="any"
+                  className="border rounded-md h-9 px-3 text-sm bg-white"
+                  value={lng}
+                  onChange={(e) => setLng(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-2">
