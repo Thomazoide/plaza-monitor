@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus, ClipboardList, CheckCircle2, Clock, Trash2, MapPin, RefreshCcw, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,12 @@ const WORK_ORDER_TYPES: WorkOrderType[] = [
   "Obras publicas",
 ]
 
+type SuperFormReferenceState = {
+  value: string | null
+  loading: boolean
+  error: string | null
+}
+
 export function OrdenesDeTrabajoPageContent() {
   const [orders, setOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,8 +42,25 @@ export function OrdenesDeTrabajoPageContent() {
   const [selectedZonaId, setSelectedZonaId] = useState<number | "">("")
   const [lat, setLat] = useState<string>("")
   const [lng, setLng] = useState<string>("")
+  const [reference, setReference] = useState<string>("")
+  const [isFetchingReference, setIsFetchingReference] = useState(false)
+  const [referenceError, setReferenceError] = useState<string | null>(null)
   const [superForms, setSuperForms] = useState<SuperForm[]>([])
   const [creatingFromSuperForm, setCreatingFromSuperForm] = useState<SuperForm | null>(null)
+  const [superFormReferences, setSuperFormReferences] = useState<Record<number, SuperFormReferenceState>>({})
+  const superFormReferencesRef = useRef<Record<number, SuperFormReferenceState>>({})
+  const updateSuperFormReferences = useCallback(
+    (updater: (prev: Record<number, SuperFormReferenceState>) => Record<number, SuperFormReferenceState>) => {
+      setSuperFormReferences((prev) => {
+        const next = updater(prev)
+        superFormReferencesRef.current = next
+        return next
+      })
+    },
+    [],
+  )
+
+  const mapsApiKeyRef = useRef<string | null | undefined>(undefined)
 
   // Aux data
   const [equipos, setEquipos] = useState<Equipo[]>([])
@@ -48,12 +71,17 @@ export function OrdenesDeTrabajoPageContent() {
     ;(async () => {
       try {
         setLoading(true)
-  const [ord, eqs, zs, sf] = await Promise.all([getWorkOrders(), getEquipos(), getZonas(), getSuperForms()])
+        const [ord, eqs, zs, sf] = await Promise.all([
+          getWorkOrders(),
+          getEquipos(),
+          getZonas(),
+          getSuperForms(),
+        ])
         if (!mounted) return
         setOrders(ord)
         setEquipos(eqs)
         setZonas(zs)
-  setSuperForms(sf)
+        setSuperForms(sf)
       } catch (e) {
         console.error("Error cargando órdenes/equipos/zonas:", e)
       } finally {
@@ -94,6 +122,221 @@ export function OrdenesDeTrabajoPageContent() {
     return Number.isFinite(parsed) ? parsed.toFixed(6) : "-"
   }
 
+  const requestReferenceFromGoogle = useCallback(
+    async (latNum: number, lngNum: number): Promise<string> => {
+      if (mapsApiKeyRef.current === undefined) {
+        try {
+          const response = await fetch("/api/get-map-key")
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          const { apiKey } = (await response.json()) as { apiKey?: string | null }
+          mapsApiKeyRef.current = apiKey ?? null
+        } catch (error) {
+          console.error("Error obteniendo clave de Google Maps:", error)
+          mapsApiKeyRef.current = null
+        }
+      }
+
+      const apiKey = mapsApiKeyRef.current
+      if (!apiKey) {
+        throw new Error("Configura GOOGLE_API_KEY para obtener referencias desde Google Maps.")
+      }
+
+      const params = new URLSearchParams({
+        latlng: `${latNum},${lngNum}`,
+        key: apiKey,
+        language: "es",
+      })
+
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`)
+      if (!response.ok) throw new Error(`Google Geocode HTTP ${response.status}`)
+      const data = (await response.json()) as {
+        status?: string
+        results?: Array<{
+          formatted_address?: string
+          address_components?: Array<{
+            long_name?: string
+            short_name?: string
+            types?: string[]
+          }>
+          types?: string[]
+        }>
+        error_message?: string
+      }
+
+      if (data.status !== "OK" || !Array.isArray(data.results) || data.results.length === 0) {
+        throw new Error(data.error_message || "Google Maps no devolvió resultados para estas coordenadas.")
+      }
+
+      const scoreResult = (result: { types?: string[] }) => {
+        const types = result.types ?? []
+        if (types.includes("street_address")) return 3
+        if (types.includes("route")) return 2
+        if (types.includes("intersection")) return 1
+        return 0
+      }
+
+      const sorted = [...data.results].sort((a, b) => scoreResult(b) - scoreResult(a))
+      const best = sorted[0]
+      if (!best) return ""
+
+      const components = Array.isArray(best.address_components) ? best.address_components : []
+      const routeComp = components.find((component) => component.types?.includes("route"))
+      const streetNumber = components.find((component) => component.types?.includes("street_number"))
+      const neighborhood = components.find((component) =>
+        component.types?.includes("sublocality_level_1") || component.types?.includes("locality"),
+      )
+
+      const parts: string[] = []
+      if (routeComp?.long_name) {
+        const base = streetNumber?.long_name ? `${routeComp.long_name} ${streetNumber.long_name}` : routeComp.long_name
+        parts.push(base)
+      }
+      if (neighborhood?.long_name) {
+        parts.push(neighborhood.long_name)
+      }
+
+      if (parts.length === 0 && typeof best.formatted_address === "string") {
+        parts.push(best.formatted_address)
+      }
+
+      return parts.join(", ").trim()
+    },
+    [],
+  )
+
+  const fetchReferenceForCoordinates = useCallback(
+    async (latValue: string, lngValue: string, superFormId?: number): Promise<string | null> => {
+      if (isFetchingReference) return reference || null
+
+      const latNum = parseCoordinate(latValue)
+      const lngNum = parseCoordinate(lngValue)
+
+      if (latNum == null || lngNum == null) {
+        setReferenceError("Necesitas coordenadas válidas para obtener una referencia de ubicación.")
+        if (superFormId != null) {
+          updateSuperFormReferences((prev) => ({
+            ...prev,
+            [superFormId]: {
+              value: prev[superFormId]?.value ?? null,
+              loading: false,
+              error: "Coordenadas no válidas para obtener referencia.",
+            },
+          }))
+        }
+        return null
+      }
+
+      setIsFetchingReference(true)
+      setReferenceError(null)
+      if (superFormId != null) {
+        updateSuperFormReferences((prev) => ({
+          ...prev,
+          [superFormId]: {
+            value: prev[superFormId]?.value ?? null,
+            loading: true,
+            error: null,
+          },
+        }))
+      }
+
+      try {
+        const result = await requestReferenceFromGoogle(latNum, lngNum)
+        const cleanReference = result.trim()
+        setReference(cleanReference)
+        if (!cleanReference) {
+          const message = "No se encontró una referencia legible para estas coordenadas."
+          setReferenceError(message)
+          if (superFormId != null) {
+            updateSuperFormReferences((prev) => ({
+              ...prev,
+              [superFormId]: { value: null, loading: false, error: message },
+            }))
+          }
+        } else if (superFormId != null) {
+          updateSuperFormReferences((prev) => ({
+            ...prev,
+            [superFormId]: { value: cleanReference, loading: false, error: null },
+          }))
+        }
+        return cleanReference || null
+      } catch (error) {
+        console.error("Error obteniendo referencia de Google Maps:", error)
+        const message = error instanceof Error ? error.message : "No se pudo obtener la referencia."
+        setReferenceError(message)
+        if (superFormId != null) {
+          updateSuperFormReferences((prev) => ({
+            ...prev,
+            [superFormId]: { value: null, loading: false, error: message },
+          }))
+        }
+        return null
+      } finally {
+        setIsFetchingReference(false)
+      }
+    },
+    [isFetchingReference, reference, requestReferenceFromGoogle, updateSuperFormReferences],
+  )
+
+  const ensureReferenceForSuperForm = useCallback(
+    async (form: SuperForm): Promise<string | null> => {
+      if (form.lat == null || form.lng == null) return null
+
+      const existing = superFormReferencesRef.current[form.id]
+      if (existing?.value && !existing.loading) return existing.value
+      if (existing?.loading) return existing.value ?? null
+
+      updateSuperFormReferences((prev) => ({
+        ...prev,
+        [form.id]: {
+          value: existing?.value ?? null,
+          loading: true,
+          error: null,
+        },
+      }))
+
+      try {
+        const result = await requestReferenceFromGoogle(form.lat, form.lng)
+        const cleanReference = result.trim()
+        updateSuperFormReferences((prev) => ({
+          ...prev,
+          [form.id]: {
+            value: cleanReference || null,
+            loading: false,
+            error: cleanReference ? null : "No se encontró una referencia legible para estas coordenadas.",
+          },
+        }))
+        return cleanReference || null
+      } catch (error) {
+        console.error("Error obteniendo referencia para SuperForm:", error)
+        const message = error instanceof Error ? error.message : "No se pudo obtener la referencia."
+        updateSuperFormReferences((prev) => ({
+          ...prev,
+          [form.id]: { value: null, loading: false, error: message },
+        }))
+        return null
+      }
+    },
+    [requestReferenceFromGoogle, updateSuperFormReferences],
+  )
+
+  useEffect(() => {
+    updateSuperFormReferences((prev) => {
+      if (superForms.length === 0) return {}
+      const next: Record<number, SuperFormReferenceState> = {}
+      for (const form of superForms) {
+        const current = prev[form.id]
+        next[form.id] = current ?? { value: null, loading: false, error: null }
+      }
+      return next
+    })
+
+    superForms.forEach((form) => {
+      if (form.lat != null && form.lng != null) {
+        void ensureReferenceForSuperForm(form)
+      }
+    })
+  }, [ensureReferenceForSuperForm, superForms, updateSuperFormReferences])
+
   const resetForm = () => {
     setDescripcion("")
     setTipo("Areas verdes")
@@ -101,20 +344,73 @@ export function OrdenesDeTrabajoPageContent() {
     setSelectedZonaId("")
     setLat("")
     setLng("")
+    setReference("")
+    setReferenceError(null)
+    setIsFetchingReference(false)
     setCreatingFromSuperForm(null)
   }
 
   const onCreate = async () => {
+    const cleanDescription = descripcion.trim()
+    if (!cleanDescription) return
+
+    const parsedLat = parseCoordinate(lat)
+    const parsedLng = parseCoordinate(lng)
+
+    let referenceValue = reference.trim()
+
+    if (!referenceValue && parsedLat != null && parsedLng != null) {
+      try {
+        const autoReference = await requestReferenceFromGoogle(parsedLat, parsedLng)
+        if (autoReference) {
+          referenceValue = autoReference
+          setReference(autoReference)
+          setReferenceError(null)
+          if (creatingFromSuperForm) {
+            const cleanAuto = autoReference.trim()
+            updateSuperFormReferences((prev) => ({
+              ...prev,
+              [creatingFromSuperForm.id]: {
+                value: cleanAuto || null,
+                loading: false,
+                error: cleanAuto ? null : "No se encontró una referencia legible para estas coordenadas.",
+              },
+            }))
+          }
+        }
+      } catch (error) {
+        console.warn("No se pudo obtener referencia automática al crear la orden:", error)
+        if (creatingFromSuperForm) {
+          const message = error instanceof Error ? error.message : "No se pudo obtener la referencia."
+          updateSuperFormReferences((prev) => ({
+            ...prev,
+            [creatingFromSuperForm.id]: { value: null, loading: false, error: message },
+          }))
+        }
+      }
+    }
+
     const payload: CreateWorkOrderPayload = {
-      descripcion: descripcion.trim(),
+      descripcion: cleanDescription,
       tipo,
       equipoID: equipoId === "" ? null : Number(equipoId),
       zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
-      lat: parseCoordinate(lat),
-      lng: parseCoordinate(lng),
+      lat: parsedLat,
+      lng: parsedLng,
+      reference: referenceValue ? referenceValue : null,
     }
 
-    if (!payload.descripcion) return
+    if (creatingFromSuperForm) {
+      const value = referenceValue ? referenceValue : null
+      updateSuperFormReferences((prev) => ({
+        ...prev,
+        [creatingFromSuperForm.id]: {
+          value,
+          loading: false,
+          error: value ? null : prev[creatingFromSuperForm.id]?.error ?? null,
+        },
+      }))
+    }
 
     const created = await createWorkOrder(payload)
     if (created) {
@@ -143,21 +439,45 @@ export function OrdenesDeTrabajoPageContent() {
     setSelectedZonaId(zonaIdFromOrder)
     setLat(typeof o.lat === "number" ? o.lat.toString() : "")
     setLng(typeof o.lng === "number" ? o.lng.toString() : "")
+    setReference(o.reference ?? "")
+    setReferenceError(null)
+    setIsFetchingReference(false)
     setDetailsOpen(true)
   }
 
   const onUpdate = async () => {
     if (!selected) return
+    const cleanDescription = descripcion.trim()
+    if (!cleanDescription) return
+
+    const parsedLat = parseCoordinate(lat)
+    const parsedLng = parseCoordinate(lng)
+
+    let referenceValue = reference.trim()
+
+    if (!referenceValue && parsedLat != null && parsedLng != null) {
+      try {
+        const autoReference = await requestReferenceFromGoogle(parsedLat, parsedLng)
+        if (autoReference) {
+          referenceValue = autoReference
+          setReference(autoReference)
+          setReferenceError(null)
+        }
+      } catch (error) {
+        console.warn("No se pudo obtener referencia automática al actualizar la orden:", error)
+      }
+    }
+
     const payload = {
       id: selected.id,
-      descripcion: descripcion.trim(),
+      descripcion: cleanDescription,
       tipo,
       equipoID: equipoId === "" ? null : Number(equipoId),
       zonaID: selectedZonaId === "" ? null : Number(selectedZonaId),
-      lat: parseCoordinate(lat),
-      lng: parseCoordinate(lng),
+      lat: parsedLat,
+      lng: parsedLng,
+      reference: referenceValue ? referenceValue : null,
     }
-    if (!payload.descripcion) return
     const updated = await updateWorkOrder(payload)
     if (updated) {
       setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)))
@@ -187,6 +507,9 @@ export function OrdenesDeTrabajoPageContent() {
       setSelectedZonaId("")
       setLat("")
       setLng("")
+      setReference("")
+      setReferenceError(null)
+      setIsFetchingReference(false)
     }
   }, [detailsOpen])
 
@@ -195,10 +518,19 @@ export function OrdenesDeTrabajoPageContent() {
     setTipo("Areas verdes")
     setEquipoId("")
     setSelectedZonaId("")
-    setLat(form.lat != null ? form.lat.toString() : "")
-    setLng(form.lng != null ? form.lng.toString() : "")
+    const latValue = form.lat != null ? form.lat.toString() : ""
+    const lngValue = form.lng != null ? form.lng.toString() : ""
+    setLat(latValue)
+    setLng(lngValue)
+    const cachedReference = superFormReferencesRef.current[form.id]?.value ?? ""
+    setReference(cachedReference || "")
+    setReferenceError(null)
+    setIsFetchingReference(false)
     setCreatingFromSuperForm(form)
     setOpen(true)
+    if (!cachedReference && latValue && lngValue) {
+      void fetchReferenceForCoordinates(latValue, lngValue, form.id)
+    }
   }
 
   return (
@@ -237,33 +569,50 @@ export function OrdenesDeTrabajoPageContent() {
             <p className="text-sm text-gray-500">No hay super formularios disponibles.</p>
           ) : (
             <div className="space-y-3">
-              {availableSuperForms.map((form) => (
-                <div
-                  key={form.id}
-                  className="border rounded-md p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-start gap-3">
-                    {form.pictureUrl ? (
-                      <div className="flex-shrink-0">
-                        <img
-                          src={form.pictureUrl}
-                          alt={`Foto formulario ${form.id}`}
-                          className="h-16 w-24 rounded-md object-cover border"
-                          loading="lazy"
-                        />
+              {availableSuperForms.map((form) => {
+                const referenceInfo = superFormReferences[form.id]
+                const isLoadingReference = referenceInfo?.loading ?? (form.lat != null && form.lng != null && referenceInfo == null)
+                return (
+                  <div
+                    key={form.id}
+                    className="border rounded-md p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-start gap-3">
+                      {form.pictureUrl ? (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={form.pictureUrl}
+                            alt={`Foto formulario ${form.id}`}
+                            className="h-16 w-24 rounded-md object-cover border"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : null}
+                      <div>
+                        <p className="font-medium">Formulario #{form.id}</p>
+                        {form.description && <p className="text-sm text-gray-600">{form.description}</p>}
+                        <p className="text-xs text-gray-500">Lat: {formatCoordinate(form.lat)} • Lng: {formatCoordinate(form.lng)}</p>
+                        {form.lat != null && form.lng != null ? (
+                          <p className="text-xs text-gray-500">
+                            {isLoadingReference
+                              ? "Buscando referencia cercana…"
+                              : referenceInfo?.value
+                                ? `Referencia: ${referenceInfo.value}`
+                                : referenceInfo?.error
+                                  ? `Referencia: ${referenceInfo.error}`
+                                  : "Referencia no disponible."}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500">Sin coordenadas para referencia.</p>
+                        )}
                       </div>
-                    ) : null}
-                    <div>
-                      <p className="font-medium">Formulario #{form.id}</p>
-                      {form.description && <p className="text-sm text-gray-600">{form.description}</p>}
-                      <p className="text-xs text-gray-500">Lat: {formatCoordinate(form.lat)} • Lng: {formatCoordinate(form.lng)}</p>
                     </div>
+                    <Button size="sm" onClick={() => handleCreateFromSuperForm(form)}>
+                      Crear orden desde este formulario
+                    </Button>
                   </div>
-                  <Button size="sm" onClick={() => handleCreateFromSuperForm(form)}>
-                    Crear orden desde este formulario
-                  </Button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -331,6 +680,9 @@ export function OrdenesDeTrabajoPageContent() {
                             <span className="ml-3">Coordenadas: {formatCoordinate(o.lat)} / {formatCoordinate(o.lng)}</span>
                           ) : null}
                         </div>
+                        {o.reference ? (
+                          <p className="mt-1 text-xs text-gray-500">Referencia: {o.reference}</p>
+                        ) : null}
                       </div>
                     </div>
                   </li>
@@ -360,6 +712,7 @@ export function OrdenesDeTrabajoPageContent() {
                 {(selected.lat != null || selected.lng != null) && (
                   <div>Coordenadas: {formatCoordinate(selected.lat)} / {formatCoordinate(selected.lng)}</div>
                 )}
+                {selected.reference ? <div>Referencia: {selected.reference}</div> : null}
               </div>
 
               {/* Equipo asignado */}
@@ -455,6 +808,39 @@ export function OrdenesDeTrabajoPageContent() {
                         onChange={(e) => setLng(e.target.value)}
                       />
                     </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-reference">Referencia de ubicación (opcional)</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <input
+                        id="edit-reference"
+                        type="text"
+                        className="border rounded-md h-9 px-3 text-sm bg-white flex-1"
+                        value={reference}
+                        onChange={(e) => {
+                          setReference(e.target.value)
+                          setReferenceError(null)
+                        }}
+                        placeholder="Ej. Avenida Siempre Viva 742"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="inline-flex items-center gap-2"
+                        onClick={() => void fetchReferenceForCoordinates(lat, lng)}
+                        disabled={
+                          isFetchingReference || lat.trim() === "" || lng.trim() === ""
+                        }
+                      >
+                        {isFetchingReference ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                        Obtener referencia
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Guardaremos este texto en el campo <code>reference</code> de la orden para identificar la dirección.
+                    </p>
+                    {referenceError ? <p className="text-xs text-red-500">{referenceError}</p> : null}
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={onUpdate} disabled={!descripcion.trim()}>Guardar cambios</Button>
@@ -582,6 +968,39 @@ export function OrdenesDeTrabajoPageContent() {
                   onChange={(e) => setLng(e.target.value)}
                 />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="reference">Referencia de ubicación (opcional)</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  id="reference"
+                  type="text"
+                  className="border rounded-md h-9 px-3 text-sm bg-white flex-1"
+                  value={reference}
+                  onChange={(e) => {
+                    setReference(e.target.value)
+                    setReferenceError(null)
+                  }}
+                  placeholder="Ej. Avenida Siempre Viva 742"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex items-center gap-2"
+                  onClick={() => void fetchReferenceForCoordinates(lat, lng, creatingFromSuperForm?.id)}
+                  disabled={
+                    isFetchingReference || lat.trim() === "" || lng.trim() === ""
+                  }
+                >
+                  {isFetchingReference ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                  Obtener referencia
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Usaremos este texto como referencia de calle al enviar la orden al backend.
+              </p>
+              {referenceError ? <p className="text-xs text-red-500">{referenceError}</p> : null}
             </div>
           </div>
           <div className="flex justify-end gap-2">

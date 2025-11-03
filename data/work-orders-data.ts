@@ -67,6 +67,7 @@ export interface CreateWorkOrderPayload {
   zonaID: number | null
   lat: number | null
   lng: number | null
+  reference: string | null
 }
 
 export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<WorkOrder | null> {
@@ -77,6 +78,7 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
       zonaId: payload.zonaID,
       lat: payload.lat,
       lng: payload.lng,
+      reference: payload.reference,
     }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
@@ -118,6 +120,7 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
       zonaId: payload.zonaID,
       lat: payload.lat,
       lng: payload.lng,
+      reference: payload.reference,
     }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
@@ -186,6 +189,12 @@ function normalizeOrders(arr: WorkOrder[]): WorkOrder[] {
           return Number.isFinite(parsed) ? parsed : null
         }
         return null
+      })(),
+      reference: (() => {
+        if (typeof anyOrder.reference === "string") return anyOrder.reference
+        if (anyOrder.reference == null) return null
+        const str = String(anyOrder.reference)
+        return str.trim() ? str : null
       })(),
       // Aseguramos que las fechas sean objetos Date cuando vengan como string
       creada_en: anyOrder.creada_en ? new Date(anyOrder.creada_en) : new Date(),

@@ -18,4 +18,5 @@ export interface WorkOrder {
     tipo: WorkOrderType;
     lat: number | null;
     lng: number | null;
+    reference: string | null;
 }
