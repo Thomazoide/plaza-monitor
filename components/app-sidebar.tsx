@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { Users, UserCheck, Car, Smartphone, MapPin, Home, ChevronRight, Shield, FileText, FileBadge, FileClock } from "lucide-react"
+import { Users, UserCheck, Car, Smartphone, MapPin, Home, ChevronRight, Shield, FileText, FileBadge, FileClock, TreesIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import {
@@ -17,6 +17,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import Image from "next/image"
 
 // Datos de navegación principal
 const navigationItems = [
@@ -88,15 +89,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-4 py-2">
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 text-sidebar-primary-foreground">
-            <MapPin className="size-4 text-white" />
+        <div className="flex flex-col items-center">
+          <div className="flex w-full mx-5 text-center justify-center text-md font-bold mt-5" >
+            Control de áreas verdes
           </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">Áreas Verdes</span>
-            <span className="truncate text-xs text-sidebar-muted-foreground">Puente Alto</span>
+          <div className="flex items-center gap-2 px-4 ">
+            <div className="flex aspect-square size-fit items-center justify-center rounded-lg text-sidebar-primary-foreground">
+              <Image src="https://www.mpuentealto.cl/wp-content/uploads/log_mpte.png" alt="Logo municipalidad" width={150} height={20}/>
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold"> <TreesIcon color="#24bf33" height={150} width={50} /> </span>
+            </div>
           </div>
         </div>
+        
       </SidebarHeader>
 
       <SidebarContent>
@@ -108,7 +114,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={activeItem === item.title}>
-                    <a href={item.url} className="flex items-center">
+                    <a href={item.url} className="flex items-center hover:bg-[#f2a700] transition-colors">
                       <item.icon className="size-4" />
                       <span>{item.title}</span>
                     </a>
@@ -127,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {resourceItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={activeItem === item.title}>
-                    <a href={item.url} className="flex items-center justify-between">
+                    <a href={item.url} className="flex items-center justify-between hover:bg-[#f2a700] transition-colors ">
                       <div className="flex items-center">
                         <item.icon className="size-4" />
                         <span>{item.title}</span>

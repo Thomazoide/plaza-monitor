@@ -96,7 +96,7 @@ export function TrabajadoresPageContent() {
             setTrabajadorToEdit(null)
             setShowCreateForm(true)
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 bg-[#015293] hover:bg-[#f2a700]"
         >
           <Plus size={16} />
           Nuevo Trabajador

@@ -264,8 +264,8 @@ export default function Dashboard(): JSX.Element {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-sm text-gray-500">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        <div className="flex flex-col items-center gap-2 text-sm text-black/60">
+          <Loader2 className="h-6 w-6 animate-spin text-[#015293]" />
           Cargando datos del dashboard...
         </div>
       </div>
@@ -277,15 +277,15 @@ export default function Dashboard(): JSX.Element {
       <Card>
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle className="text-2xl font-semibold text-gray-900">Resumen operativo</CardTitle>
-            <p className="text-sm text-gray-500">Indicadores construidos con datos del backend.</p>
+            <CardTitle className="text-2xl font-semibold text-[#015293]">Resumen operativo</CardTitle>
+            <p className="text-sm text-black/60">Indicadores construidos con datos del backend.</p>
           </div>
-          <div className="flex items-center gap-3 text-sm text-gray-500">
+          <div className="flex items-center gap-3 text-sm text-black/70">
             {lastUpdated ? <span>Actualizado: {formatDateTime(lastUpdated)}</span> : null}
             <button
               type="button"
               onClick={handleRefresh}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100"
+              className="inline-flex items-center gap-1 rounded-md border border-[#015293] px-3 py-1.5 text-xs font-semibold text-[#015293] transition-colors hover:bg-[#015293] hover:text-white"
             >
               <RefreshCcw className="h-4 w-4" /> Recargar
             </button>
@@ -293,8 +293,8 @@ export default function Dashboard(): JSX.Element {
         </CardHeader>
         {error ? (
           <CardContent>
-            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-              <AlertTriangle className="h-4 w-4" />
+            <div className="flex items-center gap-2 rounded-md border border-[#f2a700]/40 bg-[#f2a700]/10 px-3 py-2 text-sm text-[#015293]">
+              <AlertTriangle className="h-4 w-4 text-[#f2a700]" />
               <span>{error}</span>
             </div>
           </CardContent>
@@ -302,69 +302,69 @@ export default function Dashboard(): JSX.Element {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Card>
+        <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Órdenes de trabajo</CardTitle>
-            <ClipboardList className="h-5 w-5 text-blue-600" />
+            <CardTitle className="text-sm font-semibold text-[#015293]">Órdenes de trabajo</CardTitle>
+            <ClipboardList className="h-5 w-5 text-[#015293]" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">{orderStats.total}</p>
-            <p className="mt-2 text-sm text-gray-500">
-              <span className="font-medium text-emerald-600">{orderStats.completed}</span> completadas · {" "}
-              <span className="font-medium text-amber-600">{orderStats.pending}</span> pendientes
+            <p className="text-3xl font-semibold text-[#015293]">{orderStats.total}</p>
+            <p className="mt-2 text-sm text-black/70">
+              <span className="font-semibold text-[#015293]">{orderStats.completed}</span> completadas · {" "}
+              <span className="font-semibold text-[#f2a700]">{orderStats.pending}</span> pendientes
             </p>
-            <p className="mt-1 text-xs text-gray-400">Tasa de cierre {orderStats.completionRate}%</p>
+            <p className="mt-1 text-xs text-black/50">Tasa de cierre {orderStats.completionRate}%</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Equipos</CardTitle>
-            <Users className="h-5 w-5 text-indigo-600" />
+            <CardTitle className="text-sm font-semibold text-[#015293]">Equipos</CardTitle>
+            <Users className="h-5 w-5 text-[#f2a700]" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">{teamStats.total}</p>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="text-3xl font-semibold text-[#015293]">{teamStats.total}</p>
+            <p className="mt-2 text-sm text-black/70">
               {teamStats.supervisorCount} supervisores · {teamStats.withVehicle} equipos con vehículo
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Vehículos</CardTitle>
-            <Truck className="h-5 w-5 text-orange-500" />
+            <CardTitle className="text-sm font-semibold text-[#015293]">Vehículos</CardTitle>
+            <Truck className="h-5 w-5 text-[#015293]" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">{vehicleStats.total}</p>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="text-3xl font-semibold text-[#015293]">{vehicleStats.total}</p>
+            <p className="mt-2 text-sm text-black/70">
               {vehicleStats.withLocation} con ubicación · {vehicleStats.unassigned} sin equipo asignado
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Áreas verdes</CardTitle>
-            <MapPin className="h-5 w-5 text-rose-500" />
+            <CardTitle className="text-sm font-semibold text-[#015293]">Áreas verdes</CardTitle>
+            <MapPin className="h-5 w-5 text-[#f2a700]" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">{areaStats.total}</p>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="text-3xl font-semibold text-[#015293]">{areaStats.total}</p>
+            <p className="mt-2 text-sm text-black/70">
               {areaStats.visitedWeek} visitadas últ. 7 días · {areaStats.pendingOrders} con órdenes abiertas
             </p>
-            <p className="mt-1 text-xs text-gray-400">{areaStats.withoutRecentVisit} sin visita reciente</p>
+            <p className="mt-1 text-xs text-black/50">{areaStats.withoutRecentVisit} sin visita reciente</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Super formularios</CardTitle>
-            <ClipboardList className="h-5 w-5 text-sky-600" />
+            <CardTitle className="text-sm font-semibold text-[#015293]">Super formularios</CardTitle>
+            <ClipboardList className="h-5 w-5 text-[#015293]" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-gray-900">{superFormStats.total}</p>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="text-3xl font-semibold text-[#015293]">{superFormStats.total}</p>
+            <p className="mt-2 text-sm text-black/70">
               {superFormStats.pending} pendientes de orden · {superFormStats.withCoordinates} con coordenadas
             </p>
           </CardContent>
@@ -372,33 +372,40 @@ export default function Dashboard(): JSX.Element {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="h-full">
+        <Card className="h-full border-[#015293]/20">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-              <ClipboardList className="h-5 w-5 text-blue-600" /> Últimas órdenes creadas
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
+              <ClipboardList className="h-5 w-5 text-[#015293]" /> Últimas órdenes creadas
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {latestOrders.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay órdenes registradas.</p>
+              <p className="text-sm text-black/60">No hay órdenes registradas.</p>
             ) : (
               <ul className="space-y-3">
                 {latestOrders.map((order) => {
                   const equipoName = order.equipo?.nombre ?? (order.equipoID != null ? `Equipo #${order.equipoID}` : null)
                   const zonaName = order.zona?.nombre ?? (order.zonaID != null ? `Zona #${order.zonaID}` : null)
                   return (
-                    <li key={order.id} className="rounded-md border px-3 py-2">
+                    <li key={order.id} className="rounded-md border border-[#015293]/15 bg-white px-3 py-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">#{order.id}</span>
-                          <Badge variant={order.completada ? "green" : "outline"}>
+                          <span className="text-sm font-semibold text-[#015293]">#{order.id}</span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              order.completada
+                                ? "border-transparent bg-[#015293] text-white"
+                                : "border border-[#015293] bg-[#f2a700] text-black"
+                            }
+                          >
                             {order.completada ? "Completada" : "Pendiente"}
                           </Badge>
                         </div>
-                        <span className="text-xs text-gray-400">{formatDateTime(order.creada_en)}</span>
+                        <span className="text-xs text-black/50">{formatDateTime(order.creada_en)}</span>
                       </div>
-                      <p className="mt-1 text-sm text-gray-600 break-words">{order.descripcion}</p>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                      <p className="mt-1 break-words text-sm text-black/70">{order.descripcion}</p>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/60">
                         <span>Tipo: {order.tipo}</span>
                         {equipoName ? <span>Equipo: {equipoName}</span> : null}
                         {zonaName ? <span>Zona: {zonaName}</span> : null}
@@ -411,31 +418,33 @@ export default function Dashboard(): JSX.Element {
           </CardContent>
         </Card>
 
-        <Card className="h-full">
+        <Card className="h-full border-[#015293]/20">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-              <ClipboardList className="h-5 w-5 text-sky-600" /> Super formularios sin orden
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
+              <ClipboardList className="h-5 w-5 text-[#f2a700]" /> Super formularios sin orden
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {pendingSuperForms.length === 0 ? (
-              <p className="text-sm text-gray-500">Todo asignado, no hay formularios pendientes.</p>
+              <p className="text-sm text-black/60">Todo asignado, no hay formularios pendientes.</p>
             ) : (
               <ul className="space-y-3">
                 {pendingSuperForms.map((form) => {
                   const hasCoords = hasValidCoordinates(form.lat, form.lng)
                   return (
-                    <li key={form.id} className="flex items-start justify-between rounded-md border px-3 py-2">
+                    <li key={form.id} className="flex items-start justify-between rounded-md border border-[#015293]/15 bg-white px-3 py-2">
                       <div className="pr-4">
-                        <p className="text-sm font-medium text-gray-700">Formulario #{form.id}</p>
+                        <p className="text-sm font-semibold text-[#015293]">Formulario #{form.id}</p>
                         {form.description ? (
-                          <p className="mt-1 text-xs text-gray-500 break-words">{form.description}</p>
+                          <p className="mt-1 break-words text-xs text-black/60">{form.description}</p>
                         ) : null}
-                        <p className="mt-1 text-xs text-gray-400">
+                        <p className="mt-1 text-xs text-black/50">
                           {hasCoords ? `Lat ${form.lat.toFixed(5)}, Lng ${form.lng.toFixed(5)}` : "Sin coordenadas"}
                         </p>
                       </div>
-                      <Badge variant="blue">Pendiente</Badge>
+                      <Badge variant="outline" className="border-transparent bg-[#f2a700] text-black">
+                        Pendiente
+                      </Badge>
                     </li>
                   )
                 })}
@@ -445,32 +454,41 @@ export default function Dashboard(): JSX.Element {
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-[#015293]/20">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-            <MapPin className="h-5 w-5 text-rose-500" /> Áreas que requieren atención
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
+            <MapPin className="h-5 w-5 text-[#f2a700]" /> Áreas que requieren atención
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {attentionAreas.length === 0 ? (
-            <p className="text-sm text-gray-500">Todas las áreas están al día y sin trabajos pendientes.</p>
+            <p className="text-sm text-black/60">Todas las áreas están al día y sin trabajos pendientes.</p>
           ) : (
             <ul className="space-y-3">
               {attentionAreas.map(({ area, days, hasPending, needsVisit }) => (
-                <li key={area.id} className="rounded-md border px-3 py-2">
+                <li key={area.id} className="rounded-md border border-[#015293]/15 bg-white px-3 py-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-700">{area.name}</p>
-                    <Badge variant={hasPending ? "destructive" : needsVisit ? "outline" : "blue"}>
+                    <p className="text-sm font-semibold text-[#015293]">{area.name}</p>
+                    <Badge
+                      variant="outline"
+                      className={
+                        hasPending
+                          ? "border-transparent bg-[#f2a700] text-black"
+                          : needsVisit
+                            ? "border border-[#015293] text-[#015293]"
+                            : "border-transparent bg-[#015293] text-white"
+                      }
+                    >
                       {days === null ? "Sin registro" : days === 0 ? "Hoy" : `${days} días`}
                     </Badge>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-black/60">
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" /> Última visita: {formatDate(area.lastVisited)}
                     </span>
                     {hasPending ? (
-                      <span className="inline-flex items-center gap-1 text-amber-600">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Órdenes abiertas
+                      <span className="inline-flex items-center gap-1 text-black">
+                        <AlertTriangle className="h-3.5 w-3.5 text-[#f2a700]" /> Órdenes abiertas
                       </span>
                     ) : null}
                     {area.workOrders && area.workOrders.length > 0 ? (
@@ -484,26 +502,26 @@ export default function Dashboard(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-[#015293]/20">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-            <Users className="h-5 w-5 text-indigo-600" /> Supervisores registrados
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
+            <Users className="h-5 w-5 text-[#015293]" /> Supervisores registrados
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {supervisores.length === 0 ? (
-            <p className="text-sm text-gray-500">No se encontraron supervisores en el backend.</p>
+            <p className="text-sm text-black/60">No se encontraron supervisores en el backend.</p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {supervisores.map((supervisor) => (
-                <li key={supervisor.id} className="rounded-md border px-3 py-2">
-                  <p className="text-sm font-medium text-gray-700">{supervisor.fullName}</p>
-                  <p className="text-xs text-gray-500">{supervisor.email}</p>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-gray-400">
+                <li key={supervisor.id} className="rounded-md border border-[#015293]/15 bg-white px-3 py-2">
+                  <p className="text-sm font-semibold text-[#015293]">{supervisor.fullName}</p>
+                  <p className="text-xs text-black/60">{supervisor.email}</p>
+                  <div className="mt-1 flex items-center gap-2 text-xs text-black/50">
                     <span>{supervisor.celular || "Sin contacto"}</span>
                     {supervisor.equipoID != null ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-600">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Equipo #{supervisor.equipoID}
+                      <span className="inline-flex items-center gap-1 text-[#015293]">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#f2a700]" /> Equipo #{supervisor.equipoID}
                       </span>
                     ) : null}
                   </div>
