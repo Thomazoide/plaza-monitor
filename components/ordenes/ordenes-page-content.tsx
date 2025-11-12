@@ -655,9 +655,9 @@ export function OrdenesDeTrabajoPageContent() {
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <span className="inline-flex items-center gap-1">
                             {o.completada ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <CheckCircle2 className="h-4 w-4 text-[#015293]" />
                             ) : (
-                              <Clock className="h-4 w-4 text-amber-600" />
+                              <Clock className="h-4 w-4 text-[#f2a700]" />
                             )}
                             <span>{o.completada ? "Completada" : "Pendiente"}</span>
                           </span>
@@ -889,7 +889,7 @@ export function OrdenesDeTrabajoPageContent() {
             <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
           </DialogHeader>
           {creatingFromSuperForm && (
-            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            <div className="mb-4 rounded-md border border-[#015293]/30 bg-[#f2a700]/10 p-3 text-sm text-[#015293]">
               Creando orden a partir del Super Form #{creatingFromSuperForm.id}. Puedes ajustar la descripción, asignar equipo u otros campos antes de guardar.
             </div>
           )}

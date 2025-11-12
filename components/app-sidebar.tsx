@@ -98,7 +98,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <Image src="https://www.mpuentealto.cl/wp-content/uploads/log_mpte.png" alt="Logo municipalidad" width={150} height={20}/>
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold"> <TreesIcon color="#24bf33" height={150} width={50} /> </span>
+              <span className="truncate font-semibold"> <TreesIcon className="text-[#f2a700]" height={150} width={50} /> </span>
             </div>
           </div>
         </div>

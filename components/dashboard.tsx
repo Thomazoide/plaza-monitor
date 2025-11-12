@@ -302,7 +302,7 @@ export default function Dashboard(): JSX.Element {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold text-[#015293]">Órdenes de trabajo</CardTitle>
             <ClipboardList className="h-5 w-5 text-[#015293]" />
@@ -317,7 +317,7 @@ export default function Dashboard(): JSX.Element {
           </CardContent>
         </Card>
 
-        <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold text-[#015293]">Equipos</CardTitle>
             <Users className="h-5 w-5 text-[#f2a700]" />
@@ -330,7 +330,7 @@ export default function Dashboard(): JSX.Element {
           </CardContent>
         </Card>
 
-        <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold text-[#015293]">Vehículos</CardTitle>
             <Truck className="h-5 w-5 text-[#015293]" />
@@ -343,7 +343,7 @@ export default function Dashboard(): JSX.Element {
           </CardContent>
         </Card>
 
-        <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold text-[#015293]">Áreas verdes</CardTitle>
             <MapPin className="h-5 w-5 text-[#f2a700]" />
@@ -357,7 +357,7 @@ export default function Dashboard(): JSX.Element {
           </CardContent>
         </Card>
 
-        <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold text-[#015293]">Super formularios</CardTitle>
             <ClipboardList className="h-5 w-5 text-[#015293]" />
@@ -372,7 +372,7 @@ export default function Dashboard(): JSX.Element {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="h-full border-[#015293]/20">
+  <Card className="h-full border-[#015293]/20">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
               <ClipboardList className="h-5 w-5 text-[#015293]" /> Últimas órdenes creadas
@@ -418,7 +418,7 @@ export default function Dashboard(): JSX.Element {
           </CardContent>
         </Card>
 
-        <Card className="h-full border-[#015293]/20">
+  <Card className="h-full border-[#015293]/20">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
               <ClipboardList className="h-5 w-5 text-[#f2a700]" /> Super formularios sin orden
@@ -454,7 +454,7 @@ export default function Dashboard(): JSX.Element {
         </Card>
       </div>
 
-      <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
             <MapPin className="h-5 w-5 text-[#f2a700]" /> Áreas que requieren atención
@@ -502,7 +502,7 @@ export default function Dashboard(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card className="border-[#015293]/20">
+  <Card className="border-[#015293]/20">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#015293]">
             <Users className="h-5 w-5 text-[#015293]" /> Supervisores registrados

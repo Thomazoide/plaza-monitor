@@ -134,21 +134,21 @@ export function ZonasPageContent() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
-            <MapPin className="h-6 w-6 text-blue-500 mb-2" />
+            <MapPin className="h-6 w-6 text-[#015293] mb-2" />
             <p className="text-sm text-gray-600">Total de Zonas</p>
             <p className="text-2xl font-bold">{totalZonas}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <MapPin className="h-6 w-6 text-green-500 mb-2" />
+            <MapPin className="h-6 w-6 text-[#f2a700] mb-2" />
             <p className="text-sm text-gray-600">Zonas Activas</p>
             <p className="text-2xl font-bold">{zonasActivas}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <MapPin className="h-6 w-6 text-red-500 mb-2" />
+            <MapPin className="h-6 w-6 text-destructive mb-2" />
             <p className="text-sm text-gray-600">Zonas Inactivas</p>
             <p className="text-2xl font-bold">{zonasInactivas}</p>
           </CardContent>

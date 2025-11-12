@@ -78,10 +78,10 @@ export function MapaZonas({ zonas, onPolygonComplete, selectedZonaId, center, zo
             drawingModes: [google.maps.drawing.OverlayType.POLYGON],
           },
           polygonOptions: {
-            fillColor: "#4285F4",
+            fillColor: "#015293",
             fillOpacity: 0.3,
             strokeWeight: 2,
-            strokeColor: "#4285F4",
+            strokeColor: "#015293",
             clickable: false,
             editable: false, // Podría ser true si se quiere editar la forma después
             zIndex: 1,
@@ -138,10 +138,10 @@ export function MapaZonas({ zonas, onPolygonComplete, selectedZonaId, center, zo
         const isSelected = zona.id === selectedZonaId
         const polygon = new window.google.maps.Polygon({
           paths: zona.coordenadas,
-          strokeColor: isSelected ? "#FF0000" : zona.activa ? "#008000" : "#808080",
+          strokeColor: isSelected ? "#f2a700" : zona.activa ? "#015293" : "#808080",
           strokeOpacity: 0.8,
           strokeWeight: isSelected ? 3 : 2,
-          fillColor: isSelected ? "#FF0000" : zona.activa ? "#008000" : "#808080",
+          fillColor: isSelected ? "#f2a700" : zona.activa ? "#015293" : "#808080",
           fillOpacity: 0.25,
           map: mapInstanceRef.current,
           zIndex: isSelected ? 2 : 1,

@@ -91,9 +91,9 @@ export function MapaAreasVerdes({ areasVerdes, selectedAreaId, center, zoom, onA
     areasVerdes.forEach((area) => {
       const polygon = new google.maps.Polygon({
         paths: area.coordinates,
-        fillColor: "#22c55e", // Verde
+        fillColor: "#f2a700", // Acento (amarillo)
         fillOpacity: 0.4,
-        strokeColor: "#16a34a", // Verde más oscuro
+        strokeColor: "#015293", // Primario (azul)
         strokeOpacity: 0.8,
         strokeWeight: 2,
         clickable: true,
@@ -102,8 +102,8 @@ export function MapaAreasVerdes({ areasVerdes, selectedAreaId, center, zoom, onA
       // Resaltar área seleccionada
       if (selectedAreaId === area.id) {
         polygon.setOptions({
-          fillColor: "#3b82f6", // Azul
-          strokeColor: "#1d4ed8", // Azul más oscuro
+          fillColor: "#015293", // Azul de marca
+          strokeColor: "#015293", // Azul de marca
           strokeWeight: 3,
           fillOpacity: 0.6,
         })
@@ -128,7 +128,7 @@ export function MapaAreasVerdes({ areasVerdes, selectedAreaId, center, zoom, onA
           
           infoWindowRef.current.setContent(`
             <div style="padding: 8px;">
-              <h3 style="margin: 0 0 8px 0; color: #16a34a; font-weight: bold;">${area.name}</h3>
+              <h3 style="margin: 0 0 8px 0; color: #015293; font-weight: bold;">${area.name}</h3>
               <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 14px;">${area.info}</p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
                 Estado: ${visitStatus}

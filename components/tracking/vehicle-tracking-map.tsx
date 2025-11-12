@@ -405,7 +405,7 @@ export function VehicleTrackingMap({ currentEquipo }: { currentEquipo?: Equipo }
                     key={equipo.id}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedVehicle === equipo.vehiculo!.id
-                        ? "border-primary bg-primary/5"
+                        ? "border-[#015293] bg-[#015293]/5"
                         : "border-border hover:bg-muted/50"
                     }`}
                     onClick={() => setSelectedVehicle(equipo.vehiculo!.id)}
@@ -426,7 +426,7 @@ export function VehicleTrackingMap({ currentEquipo }: { currentEquipo?: Equipo }
                     <p className="text-sm text-muted-foreground">
                       {equipo.vehiculo!.patente} • {tracking.currentPosition.speed.toFixed(1)} km/h
                       {isActive && (
-                        <span className="text-green-600 font-medium ml-2">
+                        <span className="text-[#015293] font-medium ml-2">
                           • Activo
                         </span>
                       )}

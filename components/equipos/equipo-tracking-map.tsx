@@ -286,7 +286,7 @@ export const EquipoTrackingMap = forwardRef<EquipoTrackingMapRef, EquipoTracking
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 8,
-          fillColor: '#4285F4',
+          fillColor: '#015293',
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 3,
@@ -298,10 +298,10 @@ export const EquipoTrackingMap = forwardRef<EquipoTrackingMapRef, EquipoTracking
       const userLocationCircle = new window.google.maps.Circle({
         center: { lat: position.lat, lng: position.lng },
         radius: 50,
-        strokeColor: '#4285F4',
+  strokeColor: '#015293',
         strokeOpacity: 0.8,
         strokeWeight: 2,
-        fillColor: '#4285F4',
+  fillColor: '#015293',
         fillOpacity: 0.2,
         map: map,
       })
@@ -326,10 +326,10 @@ export const EquipoTrackingMap = forwardRef<EquipoTrackingMapRef, EquipoTracking
       const pulseCircle = new window.google.maps.Circle({
         center: { lat: position.lat, lng: position.lng },
         radius: 80,
-        strokeColor: "#4285F4",
+  strokeColor: "#015293",
         strokeOpacity: 0.6,
         strokeWeight: 1,
-        fillColor: "#4285F4",
+  fillColor: "#015293",
         fillOpacity: 0.1,
         map: map,
       })
