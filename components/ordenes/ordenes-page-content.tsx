@@ -60,7 +60,7 @@ export function OrdenesDeTrabajoPageContent() {
     [],
   )
 
-  const mapsApiKeyRef = useRef<string | null | undefined>(undefined)
+  // Geocoding se realiza vía API interna para no exponer la API key
 
   // Aux data
   const [equipos, setEquipos] = useState<Equipo[]>([])
@@ -124,31 +124,9 @@ export function OrdenesDeTrabajoPageContent() {
 
   const requestReferenceFromGoogle = useCallback(
     async (latNum: number, lngNum: number): Promise<string> => {
-      if (mapsApiKeyRef.current === undefined) {
-        try {
-          const response = await fetch("/api/get-map-key")
-          if (!response.ok) throw new Error(`HTTP ${response.status}`)
-          const { apiKey } = (await response.json()) as { apiKey?: string | null }
-          mapsApiKeyRef.current = apiKey ?? null
-        } catch (error) {
-          console.error("Error obteniendo clave de Google Maps:", error)
-          mapsApiKeyRef.current = null
-        }
-      }
-
-      const apiKey = mapsApiKeyRef.current
-      if (!apiKey) {
-        throw new Error("Configura GOOGLE_API_KEY para obtener referencias desde Google Maps.")
-      }
-
-      const params = new URLSearchParams({
-        latlng: `${latNum},${lngNum}`,
-        key: apiKey,
-        language: "es",
-      })
-
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`)
-      if (!response.ok) throw new Error(`Google Geocode HTTP ${response.status}`)
+      const params = new URLSearchParams({ lat: String(latNum), lng: String(lngNum), language: "es" })
+      const response = await fetch(`/api/geocode?${params.toString()}`)
+      if (!response.ok) throw new Error(`Geocode HTTP ${response.status}`)
       const data = (await response.json()) as {
         status?: string
         results?: Array<{
