@@ -47,3 +47,31 @@ export const fetchVisitFormsByZona = async (zonaId: number): Promise<VisitFormTy
     return []
   }
 }
+
+// Formularios no vinculados a ninguna zona registrada
+export const fetchVisitFormsUnassigned = async (): Promise<VisitFormType[]> => {
+  try {
+    const endpoint = await getBackendEndpoint()
+    // Endpoint esperado en backend para formularios sin zona
+    const response = await fetch(`${endpoint}/formularios/sin-zona`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const result = (await response.json()) as StandardResponse<VisitFormType[]>
+
+    if (result.error) {
+      console.error('Backend error fetching unassigned visit forms:', result.message)
+      return []
+    }
+
+    if (Array.isArray(result.data)) {
+      return result.data
+    }
+
+    console.warn('Unexpected response format for unassigned visit forms:', result)
+    return []
+  } catch (error) {
+    console.error('Error fetching unassigned visit forms:', error)
+    return []
+  }
+}

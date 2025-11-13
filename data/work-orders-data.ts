@@ -68,6 +68,7 @@ export interface CreateWorkOrderPayload {
   lat: number | null
   lng: number | null
   reference: string | null
+  superFormID: number | null
 }
 
 export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<WorkOrder | null> {
@@ -79,6 +80,7 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
       lat: payload.lat,
       lng: payload.lng,
       reference: payload.reference,
+      superFormId: payload.superFormID,
     }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
@@ -121,6 +123,7 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
       lat: payload.lat,
       lng: payload.lng,
       reference: payload.reference,
+      superFormId: payload.superFormID,
     }
     const resp = await fetch(`${endpoint}/ordenes`, {
       method: "POST",
@@ -170,9 +173,11 @@ function normalizeOrders(arr: WorkOrder[]): WorkOrder[] {
   return arr.map((order) => {
     const anyOrder = order as any
     const zonaID = typeof anyOrder.zonaID === "number" ? anyOrder.zonaID : typeof anyOrder.zonaId === "number" ? anyOrder.zonaId : null
+    const superFormID = typeof anyOrder.superFormID === "number" ? anyOrder.superFormID : typeof anyOrder.superFormId === "number" ? anyOrder.superFormId : null
     return {
       ...anyOrder,
       zonaID,
+      superFormID,
       zona: anyOrder.zona ?? null,
       lat: (() => {
         if (typeof anyOrder.lat === "number") return anyOrder.lat

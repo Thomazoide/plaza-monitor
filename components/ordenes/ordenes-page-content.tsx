@@ -398,6 +398,7 @@ export function OrdenesDeTrabajoPageContent() {
       lat: parsedLat,
       lng: parsedLng,
       reference: referenceValue ? referenceValue : null,
+      superFormID: creatingFromSuperForm ? creatingFromSuperForm.id : null,
     }
 
     if (creatingFromSuperForm) {
@@ -477,6 +478,12 @@ export function OrdenesDeTrabajoPageContent() {
       lat: parsedLat,
       lng: parsedLng,
       reference: referenceValue ? referenceValue : null,
+      superFormID: (() => {
+        const anySel: any = selected as any
+        if (typeof anySel.superFormID === "number") return anySel.superFormID
+        if (typeof anySel.superFormId === "number") return anySel.superFormId
+        return null
+      })(),
     }
     const updated = await updateWorkOrder(payload)
     if (updated) {

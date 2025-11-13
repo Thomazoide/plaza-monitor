@@ -1,4 +1,5 @@
 import { Equipo, Zona } from "./escuadras-types";
+import { SuperForm } from "./super-form-types";
 import { VisitFormType } from "./visitForms-types";
 
 export type WorkOrderType = "Areas verdes" | "Emergencias" | "Obras publicas";
@@ -19,4 +20,6 @@ export interface WorkOrder {
     lat: number | null;
     lng: number | null;
     reference: string | null;
+    superForm: SuperForm | null;
+    superFormID: number | null;
 }

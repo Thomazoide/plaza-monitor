@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import FormVisor from "@/components/formularios/formulario-visor"
-import { fetchVisitFormsByZona } from "@/data/visit-forms-data"
+import { fetchVisitFormsByZona, fetchVisitFormsUnassigned } from "@/data/visit-forms-data"
 import { fetchGreenAreas } from "@/data/zonas-data"
 import type { VisitFormType } from "@/types/visitForms-types"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export default function ReportesPage() {
+    const UNASSIGNED_ZONE_ID = -1
 	const [selectedZonaId, setSelectedZonaId] = useState<number | null>(null)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -38,7 +39,9 @@ export default function ReportesPage() {
 			setLoading(true)
 			setError(null)
 			try {
-				const data = await fetchVisitFormsByZona(selectedZonaId)
+				const data = selectedZonaId === UNASSIGNED_ZONE_ID
+					? await fetchVisitFormsUnassigned()
+					: await fetchVisitFormsByZona(selectedZonaId)
 				if (!cancelled) setForms(data)
 			} catch (e: any) {
 				if (!cancelled) setError(e?.message ?? 'Error al cargar reportes')
@@ -74,6 +77,14 @@ export default function ReportesPage() {
 									</CardHeader>
 									<CardContent>
 										<div className="flex flex-wrap gap-2">
+		                                    {/* Opción para ver formularios sin zona */}
+		                                    <Button
+		                                            key="sin-zona"
+		                                            variant={selectedZonaId === UNASSIGNED_ZONE_ID ? "default" : "outline"}
+		                                            onClick={() => setSelectedZonaId(UNASSIGNED_ZONE_ID)}
+		                                    >
+		                                            Sin zona
+		                                    </Button>
 											{filteredZonas.map((z) => (
 												<Button
 													key={z.id}
@@ -101,7 +112,11 @@ export default function ReportesPage() {
 										<div className="space-y-4">
 											<div className="flex items-center gap-3">
 												<h2 className="text-xl font-semibold">Reportes de la zona</h2>
-												<Badge variant="secondary">Zona ID: {selectedZonaId}</Badge>
+												{selectedZonaId === UNASSIGNED_ZONE_ID ? (
+													<Badge variant="secondary">Sin zona</Badge>
+												) : (
+													<Badge variant="secondary">Zona ID: {selectedZonaId}</Badge>
+												)}
 											</div>
 											{loading && (
 												<Card>
